@@ -1,90 +1,42 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants.dart';
+import '../utils/constants.dart';
 
 class ApiService {
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.login),
-        headers: {'Accept': 'application/json'},
-        body: {'email': email, 'password': password},
-      );
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: AppConstants.baseUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ),
+  );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['access_token']);
-        await prefs.setString('userName', data['user']['name']);
+  ApiService() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString(AppConstants.storageTokenKey);
 
-        return {'success': true, 'data': data};
-      } else {
-        return {
-          'success': false,
-          'message': jsonDecode(response.body)['message'] ?? 'Login failed',
-        };
-      }
-    } catch (e) {
-      return {'success': false, 'message': 'Connection error: $e'};
-    }
-  }
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
 
-  Future<List<dynamic>> fetchMenu() async {
-    try {
-      final response = await http.get(
-        Uri.parse(ApiConstants.menu),
-        headers: {'Accept': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['products'];
-      } else {
-        throw Exception('Failed to load menu');
-      }
-    } catch (e) {
-      throw Exception('Network Error: $e');
-    }
-  }
-
-  Future<bool> createOrder(Map<String, dynamic> orderData) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) return false;
-
-    try {
-      final response = await http.post(
-        Uri.parse(ApiConstants.orders),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
+          return handler.next(options);
         },
-        body: jsonEncode(orderData),
-      );
-
-      return response.statusCode == 201;
-    } catch (e) {
-      return false;
-    }
+        onError: (DioException e, handler) {
+          if (e.response?.statusCode == 401) {
+            print("Unauthorized - Token might be invalid");
+          }
+          return handler.next(e);
+        },
+      ),
+    );
   }
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token != null) {
-      try {
-        await http.post(
-          Uri.parse('${ApiConstants.baseUrl}/logout'),
-          headers: {'Authorization': 'Bearer $token'},
-        );
-      } catch (e) {
-        // Ignore errors during logout
-      }
-    }
-    await prefs.clear();
-  }
+  Dio get client => _dio;
 }

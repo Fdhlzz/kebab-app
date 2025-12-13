@@ -9,10 +9,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.0
-  shared_preferences: ^2.2.2
-  intl: ^0.19.0
-  flutter_dotenv: ^6.0.0
+
+  # Networking & Data
+  dio: ^5.4.0 # Better than http for handling Tokens/Interceptors
+  shared_preferences: ^2.2.2 # To store the Access Token locally
+  intl: ^0.19.0 # For currency formatting (Rp)
+
+  # UI & State Management
+  provider: ^6.1.1 # Simple state management (like Pinia)
+  google_fonts: ^6.1.0 # Nice fonts
+  flutter_rating_bar: ^4.0.1 # For product ratings (future)
+  badges: ^3.1.2 # Cart badge count
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -21,5 +29,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - .env
