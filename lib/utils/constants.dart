@@ -12,6 +12,6 @@ class AppConstants {
   static const String storageUrl = 'http://$ipAddress:8000/storage';
 
   // Storage Keys
-  static const String storageTokenKey = 'access_token';
+  static const String storageTokenKey = 'token';
   static const String storageUserKey = 'user_data';
 }

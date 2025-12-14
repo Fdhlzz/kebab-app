@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:kebab_app/screens/address_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/auth_provider.dart';
@@ -324,15 +325,28 @@ class CheckoutCard extends StatelessWidget {
                         );
 
                         if (!auth.isAuthenticated) {
-                          // 2. Redirect to Login if not
                           Navigator.pushNamed(context, SignInScreen.routeName);
                         } else {
-                          // 3. If logged in, proceed to Order (Future Step)
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Processing Order..."),
-                            ),
-                          );
+                          // ✅ NEW LOGIC: Check Address
+                          if (auth.user?.address == null ||
+                              auth.user!.address!.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Mohon lengkapi alamat pengiriman",
+                                ),
+                              ),
+                            );
+                            Navigator.pushNamed(
+                              context,
+                              AddressScreen.routeName,
+                            );
+                          } else {
+                            // Proceed to Payment / Order
+                            debugPrint(
+                              "Proceeding with address: ${auth.user!.address}",
+                            );
+                          }
                         }
                       },
                 style: ElevatedButton.styleFrom(

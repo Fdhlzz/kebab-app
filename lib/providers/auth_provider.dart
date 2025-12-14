@@ -1,74 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../models/user_model.dart';
+import '../utils/constants.dart'; // ✅ Import your constants
 
 class AuthProvider with ChangeNotifier {
   String? _token;
+  User? _user;
   final ApiService _api = ApiService();
 
-  // ✅ LOGIC CHANGE:
-  // We don't use a boolean flag anymore.
-  // If token exists, you are authenticated. Simple and bug-free.
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;
-
   String? get token => _token;
+  User? get user => _user;
 
   AuthProvider() {
-    // Check auth immediately when Provider is created
     checkAuth();
   }
 
-  // 1. Check Storage on App Start
+  // 1. Check Auth (App Start)
   Future<void> checkAuth() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey('token')) {
-      _token = prefs.getString('token');
-      debugPrint("🔄 AUTO-LOGIN SUCCESS: Token loaded");
+
+    // ✅ USE CONSTANT
+    if (prefs.containsKey(AppConstants.storageTokenKey)) {
+      _token = prefs.getString(AppConstants.storageTokenKey);
+      debugPrint(
+        "🔄 AUTO-LOGIN: Token loaded from ${AppConstants.storageTokenKey}",
+      );
+
+      // Fetch user profile immediately
+      await fetchUser();
     } else {
       debugPrint("⚪ NO TOKEN FOUND: Guest Mode");
     }
     notifyListeners();
   }
 
-  // 2. Login
+  // 2. Fetch User Data
+  Future<void> fetchUser() async {
+    try {
+      final response = await _api.client.get('/user');
+      _user = User.fromJson(response.data);
+      notifyListeners();
+      debugPrint("👤 USER DATA LOADED: ${_user!.name}");
+    } catch (e) {
+      debugPrint("❌ ERROR LOADING USER: $e");
+      if (e.toString().contains("401")) {
+        logout();
+      }
+    }
+  }
+
+  // 3. Login
   Future<void> login(String email, String password) async {
     try {
-      debugPrint("🔵 ATTEMPTING LOGIN: $email");
-
       final response = await _api.client.post(
         '/auth/login',
         data: {'email': email, 'password': password},
       );
 
-      debugPrint("🟢 API RESPONSE: ${response.data}");
-
-      // Check for both 'token' (your fix) and 'accessToken' (default Sanctum)
       final token = response.data['token'] ?? response.data['accessToken'];
 
       if (token != null) {
         _token = token;
 
-        // Save to Disk
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
+        // Save User Data if available in response
+        if (response.data['user'] != null) {
+          _user = User.fromJson(response.data['user']);
+        } else {
+          // Otherwise fetch it separately
+          fetchUser();
+        }
 
-        debugPrint("✅ LOGIN SUCCESS: Token Saved");
+        // ✅ USE CONSTANT
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(AppConstants.storageTokenKey, _token!);
+
         notifyListeners();
-      } else {
-        throw Exception(
-          "Server returned success but NO TOKEN found in response.",
-        );
       }
     } catch (e) {
       debugPrint("🔴 LOGIN ERROR: $e");
-      rethrow;
+      throw Exception("Invalid Email or Password");
     }
   }
 
-  // 3. Register
+  // 4. Register
   Future<void> register(String name, String email, String password) async {
     try {
-      final response = await _api.client.post(
+      await _api.client.post(
         '/auth/register',
         data: {
           'name': name,
@@ -77,29 +96,50 @@ class AuthProvider with ChangeNotifier {
           'password_confirmation': password,
         },
       );
-
-      final token = response.data['token'] ?? response.data['accessToken'];
-
-      if (token != null) {
-        _token = token;
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
-
-        notifyListeners();
-      }
     } catch (e) {
       debugPrint("🔴 REGISTER ERROR: $e");
       rethrow;
     }
   }
 
-  // 4. Logout
+  // 5. Logout
   Future<void> logout() async {
+    try {
+      // Optional: Call logout API to invalidate token on server
+      // await _api.client.post('/auth/logout');
+    } catch (e) {
+      // Ignore network errors during logout
+    }
+
     _token = null;
+    _user = null;
+
+    // ✅ USE CONSTANT
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
+    await prefs.remove(AppConstants.storageTokenKey);
+    // Optional: Also remove user data if you saved it separately
+    // await prefs.remove(AppConstants.storageUserKey);
+
     debugPrint("👋 LOGGED OUT");
     notifyListeners();
+  }
+
+  // 6. Update Address
+  Future<void> updateAddress(String districtId, String address) async {
+    try {
+      await _api.client.post(
+        '/user/address',
+        data: {'district_id': districtId, 'address': address},
+      );
+
+      // Update local state instantly
+      if (_user != null) {
+        _user!.districtId = districtId;
+        _user!.address = address;
+        notifyListeners();
+      }
+    } catch (e) {
+      throw Exception("Gagal update alamat");
+    }
   }
 }

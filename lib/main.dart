@@ -12,6 +12,8 @@ import 'screens/cart_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/sign_up_screen.dart';
 import 'screens/main_nav_screen.dart';
+import 'providers/region_provider.dart';
+import 'screens/address_screen.dart';
 
 void main() {
   runApp(
@@ -21,6 +23,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => RegionProvider()),
       ],
       child: const MyApp(),
     ),
@@ -52,6 +55,7 @@ class MyApp extends StatelessWidget {
         CartScreen.routeName: (context) => const CartScreen(),
         SignInScreen.routeName: (context) => const SignInScreen(),
         SignUpScreen.routeName: (context) => const SignUpScreen(),
+        AddressScreen.routeName: (context) => const AddressScreen(),
       },
     );
   }
