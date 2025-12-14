@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 
@@ -30,7 +31,7 @@ class ApiService {
         },
         onError: (DioException e, handler) {
           if (e.response?.statusCode == 401) {
-            print("Unauthorized - Token might be invalid");
+            debugPrint("Unauthorized - Token might be invalid");
           }
           return handler.next(e);
         },

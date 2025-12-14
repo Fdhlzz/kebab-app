@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Needed for HapticFeedback
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../providers/product_provider.dart';
 import '../providers/category_provider.dart';
+import '../providers/cart_provider.dart';
 import '../models/product_model.dart';
+import 'cart_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   static String routeName = "/home";
@@ -34,10 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
             const HomeHeader(),
             const SizedBox(height: 20),
 
-            // 1. Categories Section
+            // Categories
             const CategoriesList(),
 
-            // 2. Scrollable Product Grid
+            // Product Grid
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -54,6 +57,404 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // --- COMPONENTS ---
+
+class HomeHeader extends StatelessWidget {
+  const HomeHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "Halo, Sahabat Kebab!",
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  Text(
+                    "Mau makan apa?",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              IconBtnWithCounter(svgSrc: bellIcon, numOfitem: 0, press: () {}),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Expanded(child: SearchField()),
+              const SizedBox(width: 12),
+
+              // --- ANIMATED CART NOTIFICATION ---
+              Consumer<CartProvider>(
+                builder: (context, cart, child) => IconBtnWithCounter(
+                  svgSrc: cartIcon,
+                  numOfitem: cart.itemCount, // Dynamic Count
+                  press: () {
+                    Navigator.pushNamed(context, CartScreen.routeName);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class IconBtnWithCounter extends StatefulWidget {
+  const IconBtnWithCounter({
+    super.key,
+    required this.svgSrc,
+    this.numOfitem = 0,
+    required this.press,
+  });
+
+  final String svgSrc;
+  final int numOfitem;
+  final GestureTapCallback press;
+
+  @override
+  State<IconBtnWithCounter> createState() => _IconBtnWithCounterState();
+}
+
+class _IconBtnWithCounterState extends State<IconBtnWithCounter>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant IconBtnWithCounter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Trigger animation when count changes and is greater than 0
+    if (widget.numOfitem != oldWidget.numOfitem && widget.numOfitem > 0) {
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(50),
+      onTap: widget.press,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            height: 50,
+            width: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: SvgPicture.string(
+              widget.svgSrc,
+              colorFilter: const ColorFilter.mode(
+                Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+          ),
+          if (widget.numOfitem != 0)
+            Positioned(
+              top: -3,
+              right: 0,
+              child: ScaleTransition(
+                scale: _scaleAnimation, // Animated Badge
+                child: Container(
+                  height: 20,
+                  width: 20,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF4848),
+                    shape: BoxShape.circle,
+                    border: Border.all(width: 1.5, color: Colors.white),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.red.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      "${widget.numOfitem}",
+                      style: const TextStyle(
+                        fontSize: 10,
+                        height: 1,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class ProductCard extends StatefulWidget {
+  const ProductCard({super.key, required this.product, required this.onPress});
+
+  final Product product;
+  final VoidCallback onPress;
+
+  @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  bool _isAdded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 100),
+          lowerBound: 0.0,
+          upperBound: 0.1,
+        )..addListener(() {
+          setState(() {});
+        });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleAddToCart() {
+    _controller.forward().then((_) => _controller.reverse());
+
+    // 1. Haptic Feedback (Vibration)
+    HapticFeedback.mediumImpact();
+
+    // 2. Change Icon State
+    setState(() => _isAdded = true);
+
+    // 3. Add to Cart Provider
+    Provider.of<CartProvider>(context, listen: false).addToCart(widget.product);
+
+    // 4. Reset Icon State after 1.5 seconds
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _isAdded = false);
+    });
+
+    // 5. Show Improved SnackBar
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text("${widget.product.title} ditambahkan")),
+          ],
+        ),
+        action: SnackBarAction(
+          label: 'LIHAT',
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.pushNamed(context, CartScreen.routeName);
+          },
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFFFF9F43), // Brand Color
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(20),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double scale = 1 - _controller.value;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: widget.onPress,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            Expanded(
+              flex: 5,
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF5F6F9),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  child: widget.product.image.isNotEmpty
+                      ? Image.network(widget.product.image, fit: BoxFit.cover)
+                      : Padding(
+                          padding: const EdgeInsets.all(25.0),
+                          child: Icon(
+                            Icons.fastfood,
+                            size: 40,
+                            color: Colors.orange.shade200,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            // Info
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.product.categoryName.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade400,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.product.title,
+                          style: const TextStyle(
+                            color: Color(0xFF1D1D1D),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          "Rp ${widget.product.price.toStringAsFixed(0)}",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFFF9F43),
+                          ),
+                        ),
+                        // Smart Add Button
+                        GestureDetector(
+                          onTap: _handleAddToCart,
+                          child: Transform.scale(
+                            scale: scale,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: _isAdded
+                                    ? Colors.green
+                                    : const Color(0xFFFF9F43), // Changes color
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                _isAdded
+                                    ? Icons.check
+                                    : Icons.add, // Changes Icon
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Keeping the rest of the widgets (PopularProducts, CategoriesList, etc) standard...
+// (I will include them briefly below to ensure the file is copy-pasteable without errors)
 
 class CategoriesList extends StatelessWidget {
   const CategoriesList({super.key});
@@ -73,7 +474,6 @@ class CategoriesList extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
             itemCount: categories.length,
-            // 🔴 FIXED: Removed double underscore warning
             separatorBuilder: (context, index) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
               final category = categories[index];
@@ -126,53 +526,6 @@ class CategoriesList extends StatelessWidget {
   }
 }
 
-class HomeHeader extends StatelessWidget {
-  const HomeHeader({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    "Halo, Sahabat Kebab!",
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  Text(
-                    "Mau makan apa?",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-              IconBtnWithCounter(svgSrc: bellIcon, numOfitem: 0, press: () {}),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Expanded(child: SearchField()),
-              const SizedBox(width: 12),
-              IconBtnWithCounter(svgSrc: cartIcon, numOfitem: 0, press: () {}),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class PopularProducts extends StatelessWidget {
   const PopularProducts({super.key});
 
@@ -188,7 +541,6 @@ class PopularProducts extends StatelessWidget {
 
         List<Product> displayedProducts = productProv.products;
 
-        // Filter Logic
         if (categoryProv.selectedCategoryId != 0) {
           final selectedCatName = categoryProv.categories
               .firstWhere(
@@ -210,7 +562,6 @@ class PopularProducts extends StatelessWidget {
             child: Center(
               child: Column(
                 children: [
-                  // 🔴 FIXED: Changed to Icons.search_off
                   Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
                   const SizedBox(height: 10),
                   Text(
@@ -248,138 +599,6 @@ class PopularProducts extends StatelessWidget {
   }
 }
 
-class ProductCard extends StatelessWidget {
-  const ProductCard({super.key, required this.product, required this.onPress});
-
-  final Product product;
-  final VoidCallback onPress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: GestureDetector(
-        onTap: onPress,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 5,
-              child: Stack(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF5F6F9),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                      child: product.image.isNotEmpty
-                          ? Image.network(product.image, fit: BoxFit.cover)
-                          : Padding(
-                              padding: const EdgeInsets.all(25.0),
-                              child: Icon(
-                                Icons.fastfood,
-                                size: 40,
-                                color: Colors.orange.shade200,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              flex: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.categoryName.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade400,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          product.title,
-                          style: const TextStyle(
-                            color: Color(0xFF1D1D1D),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          "Rp ${product.price.toStringAsFixed(0)}",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFFFF9F43),
-                          ),
-                        ),
-                        Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9F43),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class SearchField extends StatelessWidget {
   const SearchField({super.key});
 
@@ -408,47 +627,6 @@ class SearchField extends StatelessWidget {
           hintText: "Cari Kebab...",
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
           prefixIcon: const Icon(Icons.search, color: Color(0xFFFF9F43)),
-        ),
-      ),
-    );
-  }
-}
-
-class IconBtnWithCounter extends StatelessWidget {
-  const IconBtnWithCounter({
-    super.key,
-    required this.svgSrc,
-    this.numOfitem = 0,
-    required this.press,
-  });
-
-  final String svgSrc;
-  final int numOfitem;
-  final GestureTapCallback press;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(50),
-      onTap: press,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        height: 50,
-        width: 50,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: SvgPicture.string(
-          svgSrc,
-          colorFilter: const ColorFilter.mode(Colors.black54, BlendMode.srcIn),
         ),
       ),
     );

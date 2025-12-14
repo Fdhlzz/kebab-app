@@ -5,23 +5,22 @@ import 'package:google_fonts/google_fonts.dart';
 // --- IMPORTS ---
 import 'providers/auth_provider.dart';
 import 'providers/product_provider.dart';
-import 'providers/category_provider.dart'; // <--- 1. IMPORT THIS
+import 'providers/category_provider.dart';
+import 'providers/cart_provider.dart';
 import 'screens/home_screen.dart';
+import 'screens/cart_screen.dart';
+import 'screens/sign_in_screen.dart';
+import 'screens/sign_up_screen.dart';
+import 'screens/main_nav_screen.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
-        // Auth Provider
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-
-        // Product Provider
+        ChangeNotifierProvider(create: (_) => AuthProvider()..checkAuth()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
-
-        // Category Provider (THIS WAS MISSING)
-        ChangeNotifierProvider(
-          create: (_) => CategoryProvider(),
-        ), // <--- 2. ADD THIS
+        ChangeNotifierProvider(create: (_) => CategoryProvider()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: const MyApp(),
     ),
@@ -36,8 +35,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Kebab App',
       debugShowCheckedModeBanner: false,
-
-      // Theme Configuration
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFFFF9F43),
@@ -48,10 +45,14 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.poppinsTextTheme(),
         scaffoldBackgroundColor: const Color(0xFFF5F6F9),
       ),
-
-      // Routing
-      initialRoute: HomeScreen.routeName,
-      routes: {HomeScreen.routeName: (context) => const HomeScreen()},
+      initialRoute: MainNavScreen.routeName,
+      routes: {
+        MainNavScreen.routeName: (context) => const MainNavScreen(),
+        HomeScreen.routeName: (context) => const HomeScreen(),
+        CartScreen.routeName: (context) => const CartScreen(),
+        SignInScreen.routeName: (context) => const SignInScreen(),
+        SignUpScreen.routeName: (context) => const SignUpScreen(),
+      },
     );
   }
 }
