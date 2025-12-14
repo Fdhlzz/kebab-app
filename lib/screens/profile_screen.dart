@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart'; // Import for clearing cart
 import 'sign_in_screen.dart';
-import 'address_screen.dart';
+import 'address/address_list_screen.dart'; // ✅ Point to New Address List
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -10,7 +11,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F9), // Light Grey Background
+      backgroundColor: const Color(0xFFF5F6F9),
       appBar: AppBar(
         title: const Text(
           "Profil Saya",
@@ -19,6 +20,7 @@ class ProfileScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // Hide back button on main tab
       ),
       body: Consumer<AuthProvider>(
         builder: (context, auth, child) {
@@ -89,21 +91,19 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 const ProfilePic(),
                 const SizedBox(height: 15),
-
-                // ✅ NAME Display
                 Text(
-                  user?.name ?? "Loading...", // Shows "Loading..." or Name
+                  user?.name ?? "User",
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
-
-                // ✅ EMAIL Display
                 Text(
-                  user?.email ?? "",
+                  user?.email ?? "email@example.com",
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
+                const SizedBox(height: 30),
 
                 // Section 1: Account
                 _buildSectionHeader("AKUN SAYA"),
@@ -112,11 +112,12 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.person_outline,
                   press: () {}, // TODO: Edit Profile Screen
                 ),
+                // ✅ UPDATED LINK TO ADDRESS LIST
                 ProfileMenu(
-                  text: "Alamat Pengiriman",
+                  text: "Daftar Alamat",
                   icon: Icons.location_on_outlined,
                   press: () =>
-                      Navigator.pushNamed(context, AddressScreen.routeName),
+                      Navigator.pushNamed(context, AddressListScreen.routeName),
                 ),
 
                 const SizedBox(height: 10),
@@ -148,8 +149,14 @@ class ProfileScreen extends StatelessWidget {
                       backgroundColor: const Color(0xFFFFE6E6), // Light Red
                     ),
                     onPressed: () async {
+                      // 1. Clear Cart
+                      Provider.of<CartProvider>(
+                        context,
+                        listen: false,
+                      ).clearCart();
+
+                      // 2. Logout Auth
                       await auth.logout();
-                      // Consumer will rebuild UI automatically
                     },
                     child: Row(
                       children: [
@@ -200,23 +207,17 @@ class ProfileScreen extends StatelessWidget {
 
 class ProfilePic extends StatelessWidget {
   const ProfilePic({super.key});
-
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.user;
-
-    // Logic for Initials
     String initials = "U";
     if (user != null && user.name.isNotEmpty) {
       List<String> names = user.name.trim().split(" ");
-      if (names.length >= 2) {
-        initials = "${names[0][0]}${names[1][0]}".toUpperCase();
-      } else {
-        initials = names[0][0].toUpperCase();
-      }
+      initials = names.length >= 2
+          ? "${names[0][0]}${names[1][0]}".toUpperCase()
+          : names[0][0].toUpperCase();
     }
-
     return SizedBox(
       height: 110,
       width: 110,
@@ -227,10 +228,7 @@ class ProfilePic extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [
-                  Color(0xFFFF7643),
-                  Color(0xFFFFAB76),
-                ], // Nice Orange Gradient
+                colors: [Color(0xFFFF7643), Color(0xFFFFAB76)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -292,11 +290,9 @@ class ProfileMenu extends StatelessWidget {
     required this.icon,
     this.press,
   });
-
   final String text;
   final IconData icon;
   final VoidCallback? press;
-
   @override
   Widget build(BuildContext context) {
     return Padding(

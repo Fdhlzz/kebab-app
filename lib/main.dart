@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:kebab_app/providers/address_provider.dart';
+import 'package:kebab_app/screens/address/add_address_screen.dart';
+import 'package:kebab_app/screens/address/address_list_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -13,7 +16,6 @@ import 'screens/sign_in_screen.dart';
 import 'screens/sign_up_screen.dart';
 import 'screens/main_nav_screen.dart';
 import 'providers/region_provider.dart';
-import 'screens/address_screen.dart';
 
 void main() {
   runApp(
@@ -24,6 +26,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => CategoryProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => RegionProvider()),
+        ChangeNotifierProvider(create: (_) => AddressProvider()),
       ],
       child: const MyApp(),
     ),
@@ -55,7 +58,8 @@ class MyApp extends StatelessWidget {
         CartScreen.routeName: (context) => const CartScreen(),
         SignInScreen.routeName: (context) => const SignInScreen(),
         SignUpScreen.routeName: (context) => const SignUpScreen(),
-        AddressScreen.routeName: (context) => const AddressScreen(),
+        AddressListScreen.routeName: (ctx) => const AddressListScreen(),
+        AddAddressScreen.routeName: (ctx) => const AddAddressScreen(),
       },
     );
   }

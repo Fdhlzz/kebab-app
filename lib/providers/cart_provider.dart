@@ -13,13 +13,14 @@ class CartProvider with ChangeNotifier {
 
   List<CartItem> get items => _items;
 
+  // ✅ Fix: Use product.title for any logic if needed, but here we use price
   double get totalPrice =>
       _items.fold(0, (sum, item) => sum + (item.product.price * item.quantity));
 
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
 
-  // 1. Add (or Increment)
   void addToCart(Product product) {
+    // ✅ Fix: Use product.id
     int index = _items.indexWhere((item) => item.product.id == product.id);
     if (index != -1) {
       _items[index].quantity++;
@@ -29,7 +30,6 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 2. Decrement (Remove if quantity is 1)
   void decrementItem(int productId) {
     int index = _items.indexWhere((item) => item.product.id == productId);
     if (index != -1) {
@@ -42,9 +42,14 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // 3. Force Remove
   void removeItem(int productId) {
     _items.removeWhere((item) => item.product.id == productId);
+    notifyListeners();
+  }
+
+  // ✅ NEW: Clear Cart (Call on Logout)
+  void clearCart() {
+    _items.clear();
     notifyListeners();
   }
 }
