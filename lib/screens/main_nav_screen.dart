@@ -5,7 +5,7 @@ import '../providers/auth_provider.dart';
 
 // Screens
 import 'home_screen.dart';
-import 'orders_screen.dart';
+import 'order/order_screen.dart';
 import 'profile_screen.dart'; // ✅ Pointing to the new file below
 
 const Color inActiveIconColor = Color(0xFFB6B6B6);
@@ -30,7 +30,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
 
         List<Widget> pages = [
           const HomeScreen(),
-          if (isUserLoggedIn) const OrdersScreen(),
+          if (isUserLoggedIn) const OrderScreen(),
           const ProfileScreen(),
         ];
 

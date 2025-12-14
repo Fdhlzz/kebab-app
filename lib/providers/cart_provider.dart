@@ -10,14 +10,23 @@ class CartItem {
 
 class CartProvider with ChangeNotifier {
   final List<CartItem> _items = [];
+  double _shippingCost = 0.0;
 
   List<CartItem> get items => _items;
+  double get shippingCost => _shippingCost;
 
   // ✅ Fix: Use product.title for any logic if needed, but here we use price
-  double get totalPrice =>
+  double get subTotal =>
       _items.fold(0, (sum, item) => sum + (item.product.price * item.quantity));
 
+  double get grandTotal => subTotal + _shippingCost;
+
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
+
+  void setShippingCost(double cost) {
+    _shippingCost = cost;
+    notifyListeners();
+  }
 
   void addToCart(Product product) {
     // ✅ Fix: Use product.id
@@ -50,6 +59,7 @@ class CartProvider with ChangeNotifier {
   // ✅ NEW: Clear Cart (Call on Logout)
   void clearCart() {
     _items.clear();
+    _shippingCost = 0.0;
     notifyListeners();
   }
 }

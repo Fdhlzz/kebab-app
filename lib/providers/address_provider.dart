@@ -38,6 +38,15 @@ class AddressProvider with ChangeNotifier {
     await fetchAddresses();
   }
 
+  Future<void> updateAddress(int id, Map<String, dynamic> data) async {
+    try {
+      await _api.client.put('/addresses/$id', data: data);
+      await fetchAddresses(); // Refresh list
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> deleteAddress(int id) async {
     await _api.client.delete('/addresses/$id');
     await fetchAddresses();

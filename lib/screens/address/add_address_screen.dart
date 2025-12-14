@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/region_provider.dart';
+import '../../models/address_model.dart'; // Import Model
 
 class AddAddressScreen extends StatefulWidget {
   static String routeName = "/add_address";
-  const AddAddressScreen({super.key});
+
+  // ✅ Optional parameter: If passed, we are in EDIT mode
+  final AddressModel? addressToEdit;
+
+  const AddAddressScreen({super.key, this.addressToEdit});
 
   @override
   State<AddAddressScreen> createState() => _AddAddressScreenState();
@@ -24,11 +29,18 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Provider.of<RegionProvider>(context, listen: false).fetchDistricts();
-      }
+      Provider.of<RegionProvider>(context, listen: false).fetchDistricts();
     });
+    if (widget.addressToEdit != null) {
+      final addr = widget.addressToEdit!;
+      label = addr.label;
+      recipientName = addr.recipientName;
+      phoneNumber = addr.phoneNumber;
+      districtId = addr.districtId;
+      fullAddress = addr.fullAddress;
+    }
   }
 
   void _submit() async {
@@ -37,29 +49,42 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       setState(() => isLoading = true);
 
       try {
-        await Provider.of<AddressProvider>(context, listen: false).addAddress({
+        final provider = Provider.of<AddressProvider>(context, listen: false);
+        final data = {
           'label': label,
           'recipient_name': recipientName,
           'phone_number': phoneNumber,
           'district_id': districtId,
           'full_address': fullAddress,
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Alamat berhasil disimpan"),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context);
+        };
+
+        if (widget.addressToEdit != null) {
+          await provider.updateAddress(widget.addressToEdit!.id, data);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Alamat berhasil diperbarui"),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          await provider.addAddress(data);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Alamat berhasil disimpan"),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         }
+
+        if (mounted) Navigator.pop(context);
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Gagal menyimpan: $e"),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
           );
         }
       } finally {
@@ -70,18 +95,27 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.addressToEdit != null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          "Tambah Alamat",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        title: Text(
+          isEdit ? "Edit Alamat" : "Tambah Alamat",
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.black),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            size: 20,
+            color: Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -113,14 +147,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                             onSelected: (val) => setState(() => label = l),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              side: BorderSide(
-                                color: label == l
-                                    ? const Color(0xFFFF7643)
-                                    : Colors.transparent,
-                              ),
-                            ),
                           ),
                         ),
                       )
@@ -132,6 +158,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   "Nama Penerima",
                   Icons.person_outline,
                   (v) => recipientName = v,
+                  initialValue: recipientName,
                 ),
                 const SizedBox(height: 20),
                 _buildInput(
@@ -139,13 +166,14 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   Icons.phone_android_outlined,
                   (v) => phoneNumber = v,
                   type: TextInputType.phone,
+                  initialValue: phoneNumber,
                 ),
                 const SizedBox(height: 20),
 
-                // Dropdown for District
                 Consumer<RegionProvider>(
                   builder: (context, region, _) =>
                       DropdownButtonFormField<String>(
+                        initialValue: districtId,
                         decoration: _inputDecoration(
                           "Kecamatan",
                           Icons.map_outlined,
@@ -179,6 +207,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   Icons.location_on_outlined,
                   (v) => fullAddress = v,
                   maxLines: 3,
+                  initialValue: fullAddress,
                 ),
                 const SizedBox(height: 40),
 
@@ -193,19 +222,15 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                         borderRadius: BorderRadius.circular(15),
                       ),
                       elevation: 5,
-                      shadowColor: const Color(
-                        0xFFFF7643,
-                      ).withValues(alpha: 0.4),
                     ),
                     child: isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "SIMPAN ALAMAT",
-                            style: TextStyle(
+                        : Text(
+                            isEdit ? "UPDATE ALAMAT" : "SIMPAN ALAMAT",
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
-                              letterSpacing: 1.1,
                             ),
                           ),
                   ),
@@ -224,8 +249,10 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     Function(String?) onSaved, {
     TextInputType type = TextInputType.text,
     int maxLines = 1,
+    String? initialValue,
   }) {
     return TextFormField(
+      initialValue: initialValue,
       decoration: _inputDecoration(label, icon),
       keyboardType: type,
       maxLines: maxLines,
@@ -249,14 +276,6 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(15),
         borderSide: const BorderSide(color: Color(0xFFFF7643), width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Colors.red),
       ),
       filled: true,
       fillColor: const Color(0xFFFAFAFA),

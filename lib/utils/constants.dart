@@ -2,7 +2,7 @@ class AppConstants {
   // =============================================================
   // 🔴 CHANGE THIS IP ADDRESS TO MATCH YOUR PC'S LOCAL IP 🔴
   // Run 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux) to find it.
-  static const String ipAddress = '10.153.190.96';
+  static const String ipAddress = '10.153.154.199';
   // =============================================================
 
   // API Base URL

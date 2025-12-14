@@ -6,6 +6,7 @@ class AddressModel {
   final String districtId;
   final String fullAddress;
   final bool isPrimary;
+  final double shippingCost; // ✅ Field to hold the price
 
   AddressModel({
     required this.id,
@@ -15,6 +16,7 @@ class AddressModel {
     required this.districtId,
     required this.fullAddress,
     required this.isPrimary,
+    required this.shippingCost,
   });
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,11 @@ class AddressModel {
       districtId: json['district_id'],
       fullAddress: json['full_address'],
       isPrimary: json['is_primary'] == 1 || json['is_primary'] == true,
+
+      // ✅ Parse the price we sent from Laravel
+      // We use tryParse to be safe against nulls or string/number formats
+      shippingCost:
+          double.tryParse(json['shipping_cost'].toString()) ?? 15000.0,
     );
   }
 }

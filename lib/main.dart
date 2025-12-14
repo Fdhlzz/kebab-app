@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kebab_app/providers/address_provider.dart';
+import 'package:kebab_app/providers/order_provider.dart';
 import 'package:kebab_app/screens/address/add_address_screen.dart';
 import 'package:kebab_app/screens/address/address_list_screen.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +17,8 @@ import 'screens/sign_in_screen.dart';
 import 'screens/sign_up_screen.dart';
 import 'screens/main_nav_screen.dart';
 import 'providers/region_provider.dart';
+import 'screens/checkout_screen.dart';
+import 'screens/order/order_screen.dart';
 
 void main() {
   runApp(
@@ -27,6 +30,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => RegionProvider()),
         ChangeNotifierProvider(create: (_) => AddressProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
       child: const MyApp(),
     ),
@@ -60,6 +64,8 @@ class MyApp extends StatelessWidget {
         SignUpScreen.routeName: (context) => const SignUpScreen(),
         AddressListScreen.routeName: (ctx) => const AddressListScreen(),
         AddAddressScreen.routeName: (ctx) => const AddAddressScreen(),
+        CheckoutScreen.routeName: (ctx) => const CheckoutScreen(),
+        OrderScreen.routeName: (ctx) => const OrderScreen(),
       },
     );
   }
