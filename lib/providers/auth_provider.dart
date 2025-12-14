@@ -3,48 +3,69 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  bool _isAuthenticated = false;
   String? _token;
   final ApiService _api = ApiService();
 
-  bool get isAuthenticated => _isAuthenticated;
+  // ✅ LOGIC CHANGE:
+  // We don't use a boolean flag anymore.
+  // If token exists, you are authenticated. Simple and bug-free.
+  bool get isAuthenticated => _token != null && _token!.isNotEmpty;
+
   String? get token => _token;
 
-  // Check if user is already logged in (on app start)
+  AuthProvider() {
+    // Check auth immediately when Provider is created
+    checkAuth();
+  }
+
+  // 1. Check Storage on App Start
   Future<void> checkAuth() async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.containsKey('token')) {
       _token = prefs.getString('token');
-      _isAuthenticated = true;
-      notifyListeners();
+      debugPrint("🔄 AUTO-LOGIN SUCCESS: Token loaded");
+    } else {
+      debugPrint("⚪ NO TOKEN FOUND: Guest Mode");
     }
+    notifyListeners();
   }
 
-  // Login Function
+  // 2. Login
   Future<void> login(String email, String password) async {
     try {
-      // 1. Send data to Laravel
+      debugPrint("🔵 ATTEMPTING LOGIN: $email");
+
       final response = await _api.client.post(
         '/auth/login',
         data: {'email': email, 'password': password},
       );
 
-      // 2. Save Token
-      if (response.data['token'] != null) {
-        _token = response.data['token'];
-        _isAuthenticated = true;
+      debugPrint("🟢 API RESPONSE: ${response.data}");
 
+      // Check for both 'token' (your fix) and 'accessToken' (default Sanctum)
+      final token = response.data['token'] ?? response.data['accessToken'];
+
+      if (token != null) {
+        _token = token;
+
+        // Save to Disk
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
 
+        debugPrint("✅ LOGIN SUCCESS: Token Saved");
         notifyListeners();
+      } else {
+        throw Exception(
+          "Server returned success but NO TOKEN found in response.",
+        );
       }
     } catch (e) {
-      // Pass error to UI
-      throw Exception("Invalid Email or Password");
+      debugPrint("🔴 LOGIN ERROR: $e");
+      rethrow;
     }
   }
 
+  // 3. Register
   Future<void> register(String name, String email, String password) async {
     try {
       final response = await _api.client.post(
@@ -57,9 +78,10 @@ class AuthProvider with ChangeNotifier {
         },
       );
 
-      if (response.data['token'] != null) {
-        _token = response.data['token'];
-        _isAuthenticated = true;
+      final token = response.data['token'] ?? response.data['accessToken'];
+
+      if (token != null) {
+        _token = token;
 
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
@@ -67,36 +89,17 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      // 🔍 DEBUG: Print the real error to Console
-      if (e.runtimeType.toString() == 'DioException') {
-        final res = (e as dynamic).response;
-        debugPrint("❌ REGISTRATION ERROR: ${res?.data}");
-
-        // Try to show the specific validation message from Laravel
-        if (res != null && res.data['message'] != null) {
-          throw Exception(res.data['message']);
-        }
-      }
-      // Default fallback
-      throw Exception(
-        "Registration Failed. Please check your internet or inputs.",
-      );
+      debugPrint("🔴 REGISTER ERROR: $e");
+      rethrow;
     }
   }
 
-  // Logout Function
+  // 4. Logout
   Future<void> logout() async {
-    try {
-      // Optional: Call logout API
-      // await _api.client.post('/auth/logout');
-    } catch (e) {
-      // Ignore API errors on logout
-    } finally {
-      _token = null;
-      _isAuthenticated = false;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('token');
-      notifyListeners();
-    }
+    _token = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    debugPrint("👋 LOGGED OUT");
+    notifyListeners();
   }
 }
