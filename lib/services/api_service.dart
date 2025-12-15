@@ -6,10 +6,11 @@ import '../utils/constants.dart';
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: AppConstants.baseUrl, // ✅ Uses your constant
+      baseUrl: AppConstants.apiUrl, // ✅ Uses your constant
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
       },
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),

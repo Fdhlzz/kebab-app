@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import '../utils/constants.dart'; // ✅ Needed for AppConstants.storageUrl
 
 class Order {
   final int id;
-  final String orderNumber; // e.g. "ORD-001"
+  final String orderNumber;
   final String status;
   final double totalPrice;
   final double shippingCost;
   final double grandTotal;
-  final String date;
+  final DateTime date; // ✅ Changed to DateTime for proper formatting
   final String shippingAddress;
   final List<OrderItem> items;
 
@@ -27,26 +28,34 @@ class Order {
     var list = json['items'] as List? ?? [];
     List<OrderItem> itemsList = list.map((i) => OrderItem.fromJson(i)).toList();
 
-    // Helper to extract total (sometimes API sends string, sometimes number)
+    // 1. Helper to extract numbers safely
     double parseDouble(dynamic val) => double.tryParse(val.toString()) ?? 0.0;
+
+    // 2. Timezone Logic (Force WITA if server sends naked string)
+    String rawDate = json['created_at'] ?? DateTime.now().toString();
+    if (!rawDate.contains('+') && !rawDate.endsWith('Z')) {
+      rawDate = "$rawDate+0800"; // Append WITA offset
+    }
+
+    // 3. Calculation
+    double subTotal = parseDouble(json['total_price']);
+    double shipCost = parseDouble(json['shipping_cost']);
 
     return Order(
       id: json['id'],
-      orderNumber: "ORD-#${json['id']}", // Generating a simple ID display
+      orderNumber: "ORD-#${json['id']}",
       status: json['status'] ?? 'pending',
-      totalPrice: parseDouble(json['total_price']),
-      shippingCost: parseDouble(
-        json['shipping_cost'],
-      ), // Assuming backend sends this
-      grandTotal:
-          parseDouble(json['total_price']) + parseDouble(json['shipping_cost']),
-      date: json['created_at'] ?? '',
+      totalPrice: subTotal,
+      shippingCost: shipCost,
+      grandTotal: subTotal + shipCost,
+      date: DateTime.parse(rawDate).toLocal(), // ✅ Convert to device local time
       shippingAddress: json['shipping_address'] ?? 'Alamat tidak tersedia',
       items: itemsList,
     );
   }
 
-  // Helper for UI Colors based on status
+  // --- UI Helpers ---
+
   Color get statusColor {
     switch (status) {
       case 'pending':
@@ -64,7 +73,6 @@ class Order {
     }
   }
 
-  // Helper for UI Text
   String get statusText {
     switch (status) {
       case 'pending':
@@ -88,29 +96,43 @@ class OrderItem {
   final String productName;
   final int quantity;
   final double price;
-  final String? image;
+  final String image; // ✅ Non-nullable String (safer for UI)
 
   OrderItem({
     required this.id,
     required this.productName,
     required this.quantity,
     required this.price,
-    this.image,
+    required this.image,
   });
 
   factory OrderItem.fromJson(Map<String, dynamic> json) {
+    // 1. Extract Product Data safely
+    var productData = json['product'];
+
+    // 2. ✅ ROBUST IMAGE LOGIC (Matches Product Model)
+    String imageUrl = '';
+
+    if (productData != null && productData['images'] != null) {
+      var imagesList = productData['images'] as List;
+      if (imagesList.isNotEmpty) {
+        String rawPath = imagesList[0]['image_path'] ?? '';
+
+        if (rawPath.isNotEmpty) {
+          if (rawPath.startsWith('http')) {
+            imageUrl = rawPath;
+          } else {
+            // Fix broken link by prepending base URL
+            imageUrl = '${AppConstants.storageUrl}/$rawPath';
+          }
+        }
+      }
+    }
+
     return OrderItem(
       id: json['id'],
-      // Handle nested product relation if available
-      productName: json['product'] != null
-          ? json['product']['name']
-          : 'Item Unknown',
-      image:
-          json['product'] != null &&
-              json['product']['images'] != null &&
-              (json['product']['images'] as List).isNotEmpty
-          ? json['product']['images'][0]['image_path']
-          : null,
+      productName: productData != null ? productData['name'] : 'Item Unknown',
+      image: imageUrl, // ✅ Will be a full URL or empty string
       quantity: json['quantity'],
       price: double.tryParse(json['price'].toString()) ?? 0.0,
     );

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
-import '../../utils/constants.dart';
-import 'order_detail_screen.dart'; // Import Detail Screen
+import 'order_detail_screen.dart';
 
 class OrderScreen extends StatefulWidget {
   static String routeName = "/orders";
@@ -56,7 +56,6 @@ class _OrderScreenState extends State<OrderScreen> {
                 child: CircularProgressIndicator(color: Color(0xFFFF7643)),
               );
             }
-
             return TabBarView(
               children: [
                 _buildOrderList(provider.activeOrders),
@@ -82,7 +81,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.1),
+                    color: Colors.grey.withOpacity(0.1),
                     blurRadius: 20,
                   ),
                 ],
@@ -106,7 +105,6 @@ class _OrderScreenState extends State<OrderScreen> {
         ),
       );
     }
-
     return ListView.separated(
       padding: const EdgeInsets.all(20),
       itemCount: orders.length,
@@ -124,17 +122,8 @@ class OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final firstItem = order.items.isNotEmpty ? order.items[0] : null;
 
-    // Construct Image URL
-    String? imageUrl;
-    if (firstItem?.image != null) {
-      imageUrl = firstItem!.image!.startsWith('http')
-          ? firstItem.image
-          : '${AppConstants.storageUrl}/${firstItem.image}';
-    }
-
     return GestureDetector(
       onTap: () {
-        // ✅ Navigate to Detail
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -149,7 +138,7 @@ class OrderCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF909090).withValues(alpha: 0.08),
+              color: const Color(0xFF909090).withOpacity(0.08),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -157,7 +146,7 @@ class OrderCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // 1. Header: Status & Date
+            // 1. Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -167,7 +156,7 @@ class OrderCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: order.statusColor.withValues(alpha: 0.1),
+                    color: order.statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -180,7 +169,7 @@ class OrderCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  order.date.substring(0, 10),
+                  DateFormat('dd MMM yyyy, HH:mm').format(order.date),
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
@@ -190,27 +179,40 @@ class OrderCard extends StatelessWidget {
               child: Divider(height: 1, color: Color(0xFFF0F0F0)),
             ),
 
-            // 2. Content: Image & Main Info
+            // 2. Content
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image Thumbnail
+                // ✅ UPDATED IMAGE LOGIC (Matches Home Screen)
                 Container(
                   height: 60,
                   width: 60,
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5F6F9),
                     borderRadius: BorderRadius.circular(10),
-                    image: imageUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(imageUrl),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
                   ),
-                  child: imageUrl == null
-                      ? const Icon(Icons.fastfood, color: Colors.orange)
-                      : null,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: (firstItem != null && firstItem.image.isNotEmpty)
+                        ? Image.network(
+                            firstItem.image,
+                            fit: BoxFit.cover,
+                            // Handle Loading Errors
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Icon(
+                                  Icons.broken_image,
+                                  size: 20,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          )
+                        // Handle Empty Image
+                        : const Center(
+                            child: Icon(Icons.fastfood, color: Colors.orange),
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 15),
 
@@ -246,7 +248,7 @@ class OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 15),
 
-            // 3. Footer: Total & Action Button
+            // 3. Footer
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

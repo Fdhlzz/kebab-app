@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/order_model.dart';
-import '../../utils/constants.dart'; // Ensure you have this for image URLs
 
 class OrderDetailScreen extends StatelessWidget {
   static String routeName = "/order_detail";
-
   final Order order;
 
   const OrderDetailScreen({super.key, required this.order});
@@ -34,7 +33,7 @@ class OrderDetailScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // 1. HEADER STATUS
+            // 1. STATUS
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -59,25 +58,31 @@ class OrderDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    order.date,
+                    DateFormat('dd MMM yyyy, HH:mm').format(order.date),
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
 
-            // 2. SHIPPING ADDRESS
+            // 2. ADDRESS
             _buildSection(
               title: "Alamat Pengiriman",
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.location_on,
-                    color: Color(0xFFFF7643),
-                    size: 24,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF2E9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Color(0xFFFF7643),
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 15),
                   Expanded(
@@ -86,51 +91,56 @@ class OrderDetailScreen extends StatelessWidget {
                       style: const TextStyle(
                         height: 1.5,
                         color: Colors.black87,
+                        fontSize: 14,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 20),
 
-            // 3. ORDER ITEMS
+            // 3. MENU ITEMS
             _buildSection(
               title: "Daftar Menu",
               child: Column(
                 children: order.items.map((item) {
-                  String? imageUrl;
-                  if (item.image != null) {
-                    imageUrl = item.image!.startsWith('http')
-                        ? item.image
-                        : '${AppConstants.storageUrl}/${item.image}';
-                  }
-
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 15),
                     child: Row(
                       children: [
+                        // ✅ UPDATED IMAGE LOGIC
                         Container(
                           height: 50,
                           width: 50,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
                             color: Colors.grey.shade100,
-                            image: imageUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(imageUrl),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null,
                           ),
-                          child: imageUrl == null
-                              ? const Icon(
-                                  Icons.fastfood,
-                                  size: 20,
-                                  color: Colors.orange,
-                                )
-                              : null,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: item.image.isNotEmpty
+                                ? Image.network(
+                                    item.image,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Center(
+                                              child: Icon(
+                                                Icons.broken_image,
+                                                size: 18,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                  )
+                                : const Center(
+                                    child: Icon(
+                                      Icons.fastfood,
+                                      size: 20,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                          ),
                         ),
                         const SizedBox(width: 15),
                         Expanded(
@@ -163,10 +173,9 @@ class OrderDetailScreen extends StatelessWidget {
                 }).toList(),
               ),
             ),
-
             const SizedBox(height: 20),
 
-            // 4. PAYMENT SUMMARY
+            // 4. SUMMARY
             _buildSection(
               title: "Rincian Pembayaran",
               child: Column(
@@ -198,33 +207,6 @@ class OrderDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-
-            const SizedBox(height: 30),
-
-            // ACTION BUTTON (Optional based on status)
-            if (order.status == 'on_delivery')
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Chat Courier Logic?
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF7643),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                  ),
-                  child: const Text(
-                    "Lacak Pesanan",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -240,7 +222,7 @@ class OrderDetailScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.05),
+            color: Colors.grey.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
