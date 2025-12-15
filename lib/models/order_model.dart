@@ -8,6 +8,7 @@ class Order {
   final double shippingCost;
   final double grandTotal;
   final String date;
+  final String shippingAddress;
   final List<OrderItem> items;
 
   Order({
@@ -19,6 +20,7 @@ class Order {
     required this.grandTotal,
     required this.date,
     required this.items,
+    required this.shippingAddress,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Order {
       grandTotal:
           parseDouble(json['total_price']) + parseDouble(json['shipping_cost']),
       date: json['created_at'] ?? '',
+      shippingAddress: json['shipping_address'] ?? 'Alamat tidak tersedia',
       items: itemsList,
     );
   }

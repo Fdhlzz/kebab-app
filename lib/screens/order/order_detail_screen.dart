@@ -82,9 +82,7 @@ class OrderDetailScreen extends StatelessWidget {
                   const SizedBox(width: 15),
                   Expanded(
                     child: Text(
-                      // Assuming your API provides a full address string
-                      // If you stored it as JSON, you might need to parse it in the Model
-                      "Detail Alamat tersedia di backend",
+                      order.shippingAddress,
                       style: const TextStyle(
                         height: 1.5,
                         color: Colors.black87,

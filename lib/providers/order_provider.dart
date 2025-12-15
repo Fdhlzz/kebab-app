@@ -77,7 +77,6 @@ class OrderProvider with ChangeNotifier {
           'address_id': addressId,
           'items': itemsPayload,
           'total_price': subtotal,
-          'shipping_cost': shippingCost,
           'payment_method': 'COD', // Defaulting to COD for now
         },
       );
