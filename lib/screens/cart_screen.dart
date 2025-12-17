@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // ✅ Required for currency formatting
 
-// ✅ Import your providers
+// Providers
 import '../providers/cart_provider.dart';
 import '../providers/address_provider.dart';
 
-// ✅ Import your models
+// Models
 import '../models/address_model.dart';
 
-// ✅ Import your screens
+// Screens
 import 'address/address_list_screen.dart';
 import 'checkout_screen.dart';
 
-// ✅ Import your currency utility
-import '../utils/currency_format.dart';
+// ✅ Local Helper Function (Fixes the "double has no instance method" error)
+String formatRupiah(double price) {
+  return NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  ).format(price);
+}
 
 class CartScreen extends StatefulWidget {
   static String routeName = "/cart";
@@ -37,7 +44,6 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen to both Cart (for items) and Address (for shipping cost)
     return Consumer2<CartProvider, AddressProvider>(
       builder: (context, cart, addressProv, _) {
         final primaryAddress = addressProv.primaryAddress;
@@ -281,9 +287,9 @@ class _CartScreenState extends State<CartScreen> {
                     color: Colors.black87,
                   ),
                 ),
-                // ✅ Use .toIDR() extension
+                // ✅ Fixed: Using formatRupiah helper
                 Text(
-                  grandTotal.toIDR(),
+                  formatRupiah(grandTotal),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -360,9 +366,9 @@ class _CartScreenState extends State<CartScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-        // ✅ Use .toIDR() extension (handle 'Gratis' logic manually)
+        // ✅ Fixed: Using formatRupiah helper
         Text(
-          value == 0 && isShipping ? "Gratis" : value.toIDR(),
+          value == 0 && isShipping ? "Gratis" : formatRupiah(value),
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -462,9 +468,9 @@ class CartItemCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // ✅ Use .toIDR() extension
+                  // ✅ Fixed: Using formatRupiah helper
                   Text(
-                    product.price.toIDR(),
+                    formatRupiah(product.price),
                     style: const TextStyle(
                       color: Color(0xFFFF7643),
                       fontWeight: FontWeight.w800,
@@ -544,8 +550,8 @@ class _EmptyCartState extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(30),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF2E9),
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFF2E9),
               shape: BoxShape.circle,
             ),
             child: const Icon(

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/address_provider.dart';
 import '../../providers/region_provider.dart';
-import '../../models/address_model.dart'; // Import Model
+import '../../models/address_model.dart';
 
 class AddAddressScreen extends StatefulWidget {
   static String routeName = "/add_address";
 
-  // ✅ Optional parameter: If passed, we are in EDIT mode
   final AddressModel? addressToEdit;
 
   const AddAddressScreen({super.key, this.addressToEdit});
@@ -25,6 +24,13 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
   String? districtId;
   String? fullAddress;
   bool isLoading = false;
+
+  final List<Map<String, dynamic>> _labelOptions = [
+    {"label": "Rumah", "icon": Icons.home_rounded},
+    {"label": "Kantor", "icon": Icons.work_rounded},
+    {"label": "Apartemen", "icon": Icons.apartment_rounded},
+    {"label": "Lainnya", "icon": Icons.location_on_rounded},
+  ];
 
   @override
   void initState() {
@@ -65,6 +71,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               const SnackBar(
                 content: Text("Alamat berhasil diperbarui"),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -75,6 +82,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               const SnackBar(
                 content: Text("Alamat berhasil disimpan"),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
               ),
             );
           }
@@ -84,7 +92,11 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Gagal: $e"), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text("Gagal: $e"),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       } finally {
@@ -98,7 +110,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     final isEdit = widget.addressToEdit != null;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         title: Text(
           isEdit ? "Edit Alamat" : "Tambah Alamat",
@@ -108,7 +120,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
@@ -121,7 +133,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+          padding: const EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(
@@ -129,85 +141,158 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               children: [
                 const Text(
                   "Label Alamat",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: ["Rumah", "Kantor", "Apartemen"]
-                      .map(
-                        (l) => Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: ChoiceChip(
-                            label: Text(l),
-                            selected: label == l,
-                            selectedColor: const Color(0xFFFF7643),
-                            backgroundColor: const Color(0xFFF5F6F9),
-                            labelStyle: TextStyle(
-                              color: label == l ? Colors.white : Colors.black54,
-                              fontWeight: FontWeight.bold,
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 45,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _labelOptions.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final option = _labelOptions[index];
+                      final isSelected = label == option['label'];
+                      return InkWell(
+                        onTap: () => setState(() => label = option['label']),
+                        borderRadius: BorderRadius.circular(12),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFFFF7643)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFFFF7643)
+                                  : Colors.grey.shade300,
                             ),
-                            onSelected: (val) => setState(() => label = l),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFFFF7643,
+                                      ).withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                option['icon'],
+                                size: 18,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                option['label'],
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey.shade600,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      )
-                      .toList(),
+                      );
+                    },
+                  ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 30),
 
+                const Text(
+                  "Detail Penerima",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 _buildInput(
                   "Nama Penerima",
-                  Icons.person_outline,
+                  Icons.person_outline_rounded,
                   (v) => recipientName = v,
                   initialValue: recipientName,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 _buildInput(
                   "Nomor HP",
-                  Icons.phone_android_outlined,
+                  Icons.phone_android_rounded,
                   (v) => phoneNumber = v,
                   type: TextInputType.phone,
                   initialValue: phoneNumber,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 30),
 
-                Consumer<RegionProvider>(
-                  builder: (context, region, _) =>
-                      DropdownButtonFormField<String>(
-                        initialValue: districtId,
-                        decoration: _inputDecoration(
-                          "Kecamatan",
-                          Icons.map_outlined,
-                        ),
-                        icon: region.isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.arrow_drop_down),
-                        items: region.districts
-                            .map(
-                              (d) => DropdownMenuItem(
-                                value: d.id,
-                                child: Text(d.name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) => districtId = val,
-                        validator: (v) =>
-                            v == null ? "Silahkan pilih kecamatan" : null,
-                      ),
+                const Text(
+                  "Detail Lokasi",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
                 ),
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 16),
+                Consumer<RegionProvider>(
+                  builder: (context, region, _) => DropdownButtonFormField<String>(
+                    value:
+                        districtId, // Use value instead of initialValue for dynamic updates
+                    decoration: _inputDecoration(
+                      "Kecamatan",
+                      Icons.map_outlined,
+                    ),
+                    icon: region.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFFFF7643),
+                            ),
+                          )
+                        : const Icon(Icons.keyboard_arrow_down_rounded),
+                    items: region.districts.map((d) {
+                      return DropdownMenuItem(
+                        value: d.id
+                            .toString(), // Ensure IDs match type (String vs Int)
+                        child: Text(
+                          d.name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => districtId = val),
+                    validator: (v) =>
+                        v == null ? "Silahkan pilih kecamatan" : null,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 _buildInput(
-                  "Alamat Lengkap",
+                  "Alamat Lengkap (Jalan, No. Rumah, RT/RW)",
                   Icons.location_on_outlined,
                   (v) => fullAddress = v,
                   maxLines: 3,
                   initialValue: fullAddress,
+                  alignLabelWithHint: true,
                 ),
                 const SizedBox(height: 40),
 
@@ -218,23 +303,33 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                     onPressed: isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF7643),
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 5,
+                      shadowColor: const Color(0xFFFF7643).withOpacity(0.4),
                     ),
                     child: isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          )
                         : Text(
-                            isEdit ? "UPDATE ALAMAT" : "SIMPAN ALAMAT",
+                            isEdit ? "SIMPAN PERUBAHAN" : "SIMPAN ALAMAT",
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              letterSpacing: 0.5,
                             ),
                           ),
                   ),
                 ),
+                const SizedBox(height: 20), // Bottom padding
               ],
             ),
           ),
@@ -250,35 +345,56 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     TextInputType type = TextInputType.text,
     int maxLines = 1,
     String? initialValue,
+    bool alignLabelWithHint = false,
   }) {
     return TextFormField(
       initialValue: initialValue,
-      decoration: _inputDecoration(label, icon),
+      decoration: _inputDecoration(
+        label,
+        icon,
+        alignLabelWithHint: alignLabelWithHint,
+      ),
       keyboardType: type,
       maxLines: maxLines,
       onSaved: onSaved,
-      validator: (v) =>
-          (v == null || v.length < 3) ? "$label tidak valid" : null,
+      style: const TextStyle(fontSize: 14),
+      validator: (v) => (v == null || v.length < 3) ? "Data tidak valid" : null,
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(
+    String label,
+    IconData icon, {
+    bool alignLabelWithHint = false,
+  }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.grey),
-      floatingLabelBehavior: FloatingLabelBehavior.always,
-      prefixIcon: Icon(icon, color: const Color(0xFFFF7643)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      labelStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+      alignLabelWithHint: alignLabelWithHint,
+      prefixIcon: Padding(
+        padding: EdgeInsets.only(
+          left: 12,
+          right: 8,
+          bottom: alignLabelWithHint ? 48 : 0, // Align icon to top for textarea
+        ),
+        child: Icon(icon, color: const Color(0xFFFF7643), size: 22),
+      ),
+      prefixIconConstraints: const BoxConstraints(minWidth: 40),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade300),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: Color(0xFFFF7643), width: 1.5),
       ),
       filled: true,
-      fillColor: const Color(0xFFFAFAFA),
+      fillColor: Colors.white,
     );
   }
 }

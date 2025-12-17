@@ -25,14 +25,14 @@ class _AddressListScreenState extends State<AddressListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6F9),
+      backgroundColor: const Color(0xFFFAFAFA), // Clean off-white
       appBar: AppBar(
         title: const Text(
           "Pilih Alamat",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
@@ -56,15 +56,31 @@ class _AddressListScreenState extends State<AddressListScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.map_outlined,
-                    size: 80,
-                    color: Colors.grey.shade300,
+                  Container(
+                    padding: const EdgeInsets.all(30),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF2E9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.location_off_rounded,
+                      size: 60,
+                      color: Color(0xFFFF7643),
+                    ),
                   ),
-                  const SizedBox(height: 15),
+                  const SizedBox(height: 20),
                   const Text(
                     "Belum ada alamat tersimpan",
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Tambahkan alamat untuk pengiriman",
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -72,9 +88,14 @@ class _AddressListScreenState extends State<AddressListScreen> {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            padding: const EdgeInsets.fromLTRB(
+              20,
+              10,
+              20,
+              100,
+            ), // Bottom padding for FAB
             itemCount: provider.addresses.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 15),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final address = provider.addresses[index];
               final isSelected = address.isPrimary;
@@ -87,28 +108,38 @@ class _AddressListScreenState extends State<AddressListScreen> {
                   padding: const EdgeInsets.only(right: 25),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFE6E6),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(Icons.delete_outline, color: Colors.red),
+                  child: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red,
+                  ),
                 ),
                 confirmDismiss: (direction) async {
                   return await showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text("Hapus Alamat?"),
-                      content: const Text(
-                        "Tindakan ini tidak dapat dibatalkan.",
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
                       ),
+                      title: const Text("Hapus Alamat?"),
+                      content: const Text("Alamat ini akan dihapus permanen."),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text("Batal"),
+                          child: const Text(
+                            "Batal",
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
                           child: const Text(
                             "Hapus",
-                            style: TextStyle(color: Colors.red),
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -118,25 +149,24 @@ class _AddressListScreenState extends State<AddressListScreen> {
                 onDismissed: (_) => provider.deleteAddress(address.id),
                 child: InkWell(
                   onTap: () => provider.setPrimary(address.id),
-                  borderRadius: BorderRadius.circular(15),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(0xFFFF7643)
-                            : Colors.transparent,
-                        width: 1.5,
-                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: isSelected
+                          ? Border.all(
+                              color: const Color(0xFFFF7643),
+                              width: 1.5,
+                            )
+                          : Border.all(color: Colors.transparent),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(
-                            0xFF909090,
-                          ).withValues(alpha: 0.05),
-                          blurRadius: 10,
+                          color: isSelected
+                              ? const Color(0xFFFF7643).withOpacity(0.1)
+                              : Colors.black.withOpacity(0.04),
+                          blurRadius: 15,
                           offset: const Offset(0, 4),
                         ),
                       ],
@@ -144,25 +174,25 @@ class _AddressListScreenState extends State<AddressListScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Radio Button Visual
+                        // Radio Indicator
                         Container(
-                          margin: const EdgeInsets.only(top: 4),
-                          height: 20,
-                          width: 20,
+                          margin: const EdgeInsets.only(top: 2),
+                          height: 22,
+                          width: 22,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isSelected
                                   ? const Color(0xFFFF7643)
-                                  : Colors.grey.shade300,
+                                  : Colors.grey[300]!,
                               width: 2,
                             ),
                           ),
                           child: isSelected
                               ? Center(
                                   child: Container(
-                                    height: 10,
-                                    width: 10,
+                                    height: 12,
+                                    width: 12,
                                     decoration: const BoxDecoration(
                                       color: Color(0xFFFF7643),
                                       shape: BoxShape.circle,
@@ -171,9 +201,9 @@ class _AddressListScreenState extends State<AddressListScreen> {
                                 )
                               : null,
                         ),
-                        const SizedBox(width: 15),
+                        const SizedBox(width: 16),
 
-                        // Address Details
+                        // Details
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,48 +212,50 @@ class _AddressListScreenState extends State<AddressListScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    address.label.toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey[600],
-                                      letterSpacing: 1.0,
+                                  Expanded(
+                                    child: Text(
+                                      address.label,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              AddAddressScreen(
-                                                addressToEdit: address,
-                                              ),
+                                  if (isSelected)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF7643,
+                                        ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        "Utama",
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFFFF7643),
                                         ),
-                                      ).then((_) => provider.fetchAddresses());
-                                    },
-                                    child: const Text(
-                                      "Ubah",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFFF7643),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 5),
+                              const SizedBox(height: 6),
                               Text(
                                 address.recipientName,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                   color: Colors.black87,
                                 ),
                               ),
-                              const SizedBox(height: 2),
                               Text(
                                 address.phoneNumber,
                                 style: TextStyle(
@@ -234,25 +266,49 @@ class _AddressListScreenState extends State<AddressListScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 address.fullAddress,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.black87,
+                                  color: Colors.grey[700],
                                   height: 1.4,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (isSelected) ...[
-                                const SizedBox(height: 8),
-                                const Text(
-                                  "Ongkir: Otomatis dihitung",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.w600,
+
+                              // Edit Button (Moved inside card for clarity)
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AddAddressScreen(
+                                        addressToEdit: address,
+                                      ),
+                                    ),
+                                  ).then((_) => provider.fetchAddresses());
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                    horizontal: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.grey[300]!,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    "Ubah Alamat",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
                                   ),
                                 ),
-                              ],
+                              ),
                             ],
                           ),
                         ),
@@ -267,15 +323,19 @@ class _AddressListScreenState extends State<AddressListScreen> {
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 10,
-              offset: Offset(0, -5),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
             ),
           ],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
         ),
         child: SafeArea(
           child: ElevatedButton(
@@ -286,14 +346,15 @@ class _AddressListScreenState extends State<AddressListScreen> {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(16),
               ),
-              elevation: 0,
+              elevation: 5,
+              shadowColor: const Color(0xFFFF7643).withOpacity(0.4),
             ),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_location_alt_outlined),
+                Icon(Icons.add_location_alt_rounded, size: 20),
                 SizedBox(width: 10),
                 Text(
                   "Tambah Alamat Baru",

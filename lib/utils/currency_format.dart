@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-// This extension allows you to call .toIDR() on any number (int or double)
+// This extension adds the .toIDR() method to any number
 extension CurrencyFormat on num {
   String toIDR() {
     return NumberFormat.currency(

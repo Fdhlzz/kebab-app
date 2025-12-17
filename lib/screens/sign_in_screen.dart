@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import 'sign_up_screen.dart';
 import 'main_nav_screen.dart';
+import '../utils/error_handler.dart'; // ✅ Import Error Handler
 
 class SignInScreen extends StatelessWidget {
   static String routeName = "/sign_in";
@@ -17,7 +18,11 @@ class SignInScreen extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.black87,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -30,19 +35,24 @@ class SignInScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   const Text(
                     "Selamat Datang!",
                     style: TextStyle(
                       color: Colors.black,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Masuk untuk melanjutkan pesanan kebab lezatmu.",
-                    style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 15,
+                      height: 1.5,
+                    ),
                   ),
                   const SizedBox(height: 40),
                   const SignInForm(),
@@ -54,7 +64,7 @@ class SignInScreen extends StatelessWidget {
                     children: [
                       Text(
                         "Belum punya akun? ",
-                        style: TextStyle(color: Colors.grey[600]),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pushNamed(
@@ -66,6 +76,7 @@ class SignInScreen extends StatelessWidget {
                           style: TextStyle(
                             color: Color(0xFFFF7643),
                             fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
                       ),
@@ -111,7 +122,7 @@ class _SignInFormState extends State<SignInForm> {
           final cart = Provider.of<CartProvider>(context, listen: false);
 
           if (cart.items.isNotEmpty) {
-            Navigator.pop(context); // Back to Checkout
+            Navigator.pop(context); // Back to Checkout if came from cart
           } else {
             Navigator.pushNamedAndRemoveUntil(
               context,
@@ -122,6 +133,9 @@ class _SignInFormState extends State<SignInForm> {
         }
       } catch (e) {
         if (mounted) {
+          // ✅ Use ErrorHandler here
+          String friendlyError = ErrorHandler.parse(e);
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -130,7 +144,8 @@ class _SignInFormState extends State<SignInForm> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      e.toString().replaceAll('Exception:', '').trim(),
+                      friendlyError, // ✅ Clean message
+                      style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -140,6 +155,7 @@ class _SignInFormState extends State<SignInForm> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
+              margin: const EdgeInsets.all(20),
             ),
           );
         }
@@ -183,8 +199,11 @@ class _SignInFormState extends State<SignInForm> {
                 .copyWith(
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureText ? Icons.visibility_off : Icons.visibility,
+                      _obscureText
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       color: Colors.grey,
+                      size: 20,
                     ),
                     onPressed: () =>
                         setState(() => _obscureText = !_obscureText),
@@ -201,19 +220,28 @@ class _SignInFormState extends State<SignInForm> {
               onPressed: _isLoading ? null : _submit,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7643),
+                foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 2,
+                elevation: 5,
+                shadowColor: const Color(0xFFFF7643).withOpacity(0.4),
               ),
               child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : const Text(
                       "Masuk",
                       style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
                       ),
                     ),
             ),
@@ -226,16 +254,17 @@ class _SignInFormState extends State<SignInForm> {
   InputDecoration _modernInputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      labelStyle: TextStyle(color: Colors.grey[600]),
-      prefixIcon: Icon(icon, color: const Color(0xFFFF7643)),
+      labelStyle: TextStyle(color: Colors.grey[600], fontSize: 14),
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+      prefixIcon: Icon(icon, color: const Color(0xFFFF7643), size: 22),
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: BorderSide(color: Colors.grey.shade200),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFFF7643), width: 2),
+        borderSide: const BorderSide(color: Color(0xFFFF7643), width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
@@ -243,10 +272,10 @@ class _SignInFormState extends State<SignInForm> {
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+        borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
       ),
       filled: true,
-      fillColor: Colors.grey.shade50,
+      fillColor: const Color(0xFFFAFAFA),
     );
   }
 }
