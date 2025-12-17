@@ -14,6 +14,7 @@ dependencies:
   dio: ^5.4.0 # Better than http for handling Tokens/Interceptors
   shared_preferences: ^2.2.2 # To store the Access Token locally
   intl: ^0.19.0 # For currency formatting (Rp)
+  image_picker: ^1.0.4
 
   # UI & State Management
   provider: ^6.1.1 # Simple state management (like Pinia)

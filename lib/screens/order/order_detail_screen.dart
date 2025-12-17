@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/order_model.dart';
+import '../payment_upload_screen.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   static String routeName = "/order_detail";
@@ -10,6 +11,17 @@ class OrderDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // --- STATE LOGIC ---
+    bool hasProof =
+        order.paymentProof != null && order.paymentProof!.isNotEmpty;
+    bool isUnpaidQRIS =
+        order.paymentMethod == 'QRIS' &&
+        order.paymentStatus == 'unpaid' &&
+        !hasProof;
+    bool isVerifying = order.paymentStatus == 'unpaid' && hasProof;
+    bool isPaid = order.paymentStatus == 'paid';
+    // -------------------
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6F9),
       appBar: AppBar(
@@ -66,7 +78,155 @@ class OrderDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 2. ADDRESS
+            // 2. PAYMENT INFO SECTION
+            _buildSection(
+              title: "Informasi Pembayaran",
+              child: Column(
+                children: [
+                  _summaryRowText(
+                    "Metode",
+                    order.paymentMethod == 'COD'
+                        ? "Bayar di Tempat (COD)"
+                        : "QRIS / Transfer",
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Status Bayar",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          // Green (Paid) / Orange (Verifying) / Red (Unpaid)
+                          color: isPaid
+                              ? Colors.green.shade50
+                              : (isVerifying
+                                    ? Colors.orange.shade50
+                                    : Colors.red.shade50),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isPaid
+                                ? Colors.green
+                                : (isVerifying ? Colors.orange : Colors.red),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Text(
+                          isPaid
+                              ? "LUNAS"
+                              : (isVerifying
+                                    ? "MENUNGGU VERIFIKASI"
+                                    : "BELUM LUNAS"),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isPaid
+                                ? Colors.green
+                                : (isVerifying ? Colors.orange : Colors.red),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // ACTION: Upload Button if Unpaid QRIS (No proof yet)
+                  if (isUnpaidQRIS) ...[
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PaymentUploadScreen(
+                                orderId: order.id,
+                                total: order.grandTotal,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.cloud_upload_outlined,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          "Upload Bukti Transfer",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF7643),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // INFO: Show Proof if already uploaded
+                  if (hasProof) ...[
+                    const SizedBox(height: 15),
+                    const Divider(),
+                    const SizedBox(height: 10),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Bukti Transfer:",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        order.paymentProof!,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, err, _) => Container(
+                          height: 50,
+                          color: Colors.grey[200],
+                          alignment: Alignment.center,
+                          child: const Text(
+                            "Gagal memuat gambar",
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isVerifying)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 5),
+                        child: Text(
+                          "Menunggu verifikasi admin...",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 3. ADDRESS
             _buildSection(
               title: "Alamat Pengiriman",
               child: Row(
@@ -100,7 +260,7 @@ class OrderDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 3. MENU ITEMS
+            // 4. MENU ITEMS
             _buildSection(
               title: "Daftar Menu",
               child: Column(
@@ -109,7 +269,6 @@ class OrderDetailScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 15),
                     child: Row(
                       children: [
-                        // ✅ UPDATED IMAGE LOGIC
                         Container(
                           height: 50,
                           width: 50,
@@ -175,9 +334,9 @@ class OrderDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 4. SUMMARY
+            // 5. SUMMARY
             _buildSection(
-              title: "Rincian Pembayaran",
+              title: "Rincian Biaya",
               child: Column(
                 children: [
                   _summaryRow("Subtotal", order.totalPrice),
@@ -251,6 +410,16 @@ class OrderDetailScreen extends StatelessWidget {
           "Rp${value.toStringAsFixed(0)}",
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
+      ],
+    );
+  }
+
+  Widget _summaryRowText(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     );
   }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 import 'order_detail_screen.dart';
+import '../payment_upload_screen.dart';
 
 class OrderScreen extends StatefulWidget {
   static String routeName = "/orders";
@@ -122,6 +123,28 @@ class OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final firstItem = order.items.isNotEmpty ? order.items[0] : null;
 
+    // --- ✅ UPDATED LOGIC START ---
+
+    // 1. Has Proof?
+    final bool hasProof =
+        order.paymentProof != null && order.paymentProof!.isNotEmpty;
+
+    // 2. Action Needed: QRIS + Unpaid + NO Proof
+    final bool isUnpaidQRIS =
+        order.paymentMethod == 'QRIS' &&
+        order.paymentStatus == 'unpaid' &&
+        !hasProof;
+
+    // 3. Waiting: QRIS + Unpaid + HAS Proof + Status is STILL Pending
+    // Only show "Verifying" if Admin hasn't touched it yet (status == pending)
+    final bool isVerifying =
+        order.paymentMethod == 'QRIS' &&
+        order.paymentStatus == 'unpaid' &&
+        hasProof &&
+        order.status == 'pending';
+
+    // --- LOGIC END ---
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -129,7 +152,10 @@ class OrderCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => OrderDetailScreen(order: order),
           ),
-        );
+        ).then((_) {
+          // Optional: Refresh list when coming back from detail
+          Provider.of<OrderProvider>(context, listen: false).fetchOrders();
+        });
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -156,14 +182,27 @@ class OrderCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: order.statusColor.withOpacity(0.1),
+                    // Color Logic: Red (Unpaid), Orange (Verifying), or Default Status Color
+                    color: isUnpaidQRIS
+                        ? Colors.red.withOpacity(0.1)
+                        : (isVerifying
+                              ? Colors.orange.withOpacity(0.1)
+                              : order.statusColor.withOpacity(0.1)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    order.statusText,
+                    // Text Logic: "Belum Dibayar", "Menunggu Verifikasi", or "Sedang Disiapkan/Diantar"
+                    isUnpaidQRIS
+                        ? "Belum Dibayar"
+                        : (isVerifying
+                              ? "Menunggu Verifikasi"
+                              : order.statusText),
                     style: TextStyle(
                       fontSize: 12,
-                      color: order.statusColor,
+                      // Text Color Logic
+                      color: isUnpaidQRIS
+                          ? Colors.red
+                          : (isVerifying ? Colors.orange : order.statusColor),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -183,7 +222,6 @@ class OrderCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ✅ UPDATED IMAGE LOGIC (Matches Home Screen)
                 Container(
                   height: 60,
                   width: 60,
@@ -197,7 +235,6 @@ class OrderCard extends StatelessWidget {
                         ? Image.network(
                             firstItem.image,
                             fit: BoxFit.cover,
-                            // Handle Loading Errors
                             errorBuilder: (context, error, stackTrace) {
                               return const Center(
                                 child: Icon(
@@ -208,15 +245,12 @@ class OrderCard extends StatelessWidget {
                               );
                             },
                           )
-                        // Handle Empty Image
                         : const Center(
                             child: Icon(Icons.fastfood, color: Colors.orange),
                           ),
                   ),
                 ),
                 const SizedBox(width: 15),
-
-                // Text Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,20 +304,49 @@ class OrderCard extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                // Button Logic
                 ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderDetailScreen(order: order),
-                      ),
-                    );
+                    // Only go to Upload screen if strictly Unpaid AND No Proof
+                    if (isUnpaidQRIS) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaymentUploadScreen(
+                            orderId: order.id,
+                            total: order.grandTotal,
+                          ),
+                        ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderDetailScreen(order: order),
+                        ),
+                      ).then((_) {
+                        // Refresh when returning from detail to keep list synced
+                        Provider.of<OrderProvider>(
+                          context,
+                          listen: false,
+                        ).fetchOrders();
+                      });
+                    }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFFFF7643),
-                    side: const BorderSide(color: Color(0xFFFF7643)),
-                    elevation: 0,
+                    backgroundColor: isUnpaidQRIS
+                        ? const Color(0xFFFF7643)
+                        : Colors.white,
+                    foregroundColor: isUnpaidQRIS
+                        ? Colors.white
+                        : const Color(0xFFFF7643),
+                    side: BorderSide(
+                      color: isUnpaidQRIS
+                          ? Colors.transparent
+                          : const Color(0xFFFF7643),
+                    ),
+                    elevation: isUnpaidQRIS ? 2 : 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
                     ),
@@ -292,9 +355,12 @@ class OrderCard extends StatelessWidget {
                       vertical: 10,
                     ),
                   ),
-                  child: const Text(
-                    "Lihat Detail",
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  child: Text(
+                    isUnpaidQRIS ? "Upload Bukti" : "Lihat Detail",
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

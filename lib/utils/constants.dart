@@ -5,8 +5,7 @@ class AppConstants {
   // ---------------------------------------------------------------------------
 
   // ✅ Ngrok URL (HTTPS is required for Midtrans/Production simulation)
-  static const String baseUrl =
-      'https://ladawn-unadhering-difficultly.ngrok-free.dev';
+  static const String baseUrl = 'http://172.16.121.93:8000';
 
   // ---------------------------------------------------------------------------
   // ❌ OLD LOCALHOST CONFIGS (Keep for reference)

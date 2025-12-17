@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../providers/cart_provider.dart';
-import '../models/order_model.dart'; // Ensure you created this model in the previous step
+import '../models/order_model.dart';
 
 class OrderProvider with ChangeNotifier {
   final ApiService _api = ApiService();
@@ -31,16 +31,12 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Calls GET /api/orders
       final response = await _api.client.get('/orders');
-
-      // Handle Laravel Pagination or Standard Response
       final List data = response.data['data'] ?? [];
 
       _orders = data.map((json) => Order.fromJson(json)).toList();
     } catch (e) {
       debugPrint("Fetch Order Error: $e");
-      // Keep previous orders or empty list on error
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -53,6 +49,7 @@ class OrderProvider with ChangeNotifier {
     required List<CartItem> items,
     required double subtotal,
     required double shippingCost,
+    required String paymentMethod, // ✅ NEW: Receive 'COD' or 'QRIS'
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -64,24 +61,23 @@ class OrderProvider with ChangeNotifier {
             (item) => {
               'product_id': item.product.id,
               'quantity': item.quantity,
-              'price':
-                  item.product.price, // Sending price for verification/history
+              'price': item.product.price,
             },
           )
           .toList();
 
-      // 2. Send POST Request
+      // 2. Send POST Request with Payment Method
       await _api.client.post(
         '/orders',
         data: {
           'address_id': addressId,
           'items': itemsPayload,
           'total_price': subtotal,
-          'payment_method': 'COD', // Defaulting to COD for now
+          'payment_method': paymentMethod, // ✅ UPDATED: Send the selection
         },
       );
 
-      // 3. Refresh the order list locally so the "Orders" tab is updated immediately
+      // 3. Refresh list immediately so the UI can grab the new order ID
       await fetchOrders();
 
       _isLoading = false;

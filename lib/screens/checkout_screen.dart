@@ -4,6 +4,7 @@ import '../providers/cart_provider.dart';
 import '../providers/address_provider.dart';
 import '../providers/order_provider.dart';
 import 'main_nav_screen.dart';
+import 'payment_upload_screen.dart'; // ✅ Create this file next
 
 class CheckoutScreen extends StatefulWidget {
   static String routeName = "/checkout";
@@ -36,12 +37,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       items: cartProv.items,
       subtotal: cartProv.subTotal,
       shippingCost: cartProv.shippingCost,
+      paymentMethod: selectedPayment,
     );
 
     if (success) {
       cartProv.clearCart();
       if (!mounted) return;
-      _showSuccessDialog();
+
+      // ✅ LOGIC: Where to go?
+      if (selectedPayment == 'QRIS') {
+        // 1. Get the new order ID (Provider refreshed it, so it's the first one)
+        final newOrder = orderProv.activeOrders.first;
+
+        // 2. Go to Upload Screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentUploadScreen(
+              orderId: newOrder.id,
+              total: newOrder.grandTotal,
+            ),
+          ),
+        );
+      } else {
+        // 3. COD -> Show Success
+        _showSuccessDialog();
+      }
     } else {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -151,8 +172,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. DELIVERY ADDRESS CARD
                 _sectionTitle("Alamat Pengiriman"),
+                // ... (Keep existing Address Card Code) ...
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -214,91 +235,50 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                 const SizedBox(height: 25),
 
-                // 2. ORDER SUMMARY CARD
+                // ... (Keep existing Summary Card Code) ...
                 _sectionTitle("Ringkasan Pesanan"),
                 Container(
+                  // ... keep existing summary card content
                   padding: const EdgeInsets.all(20),
                   decoration: _cardDecoration(),
                   child: Column(
                     children: [
-                      ...cart.items
-                          .map(
-                            (item) => Padding(
-                              padding: const EdgeInsets.only(bottom: 15),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF5F6F9),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      "${item.quantity}x",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFFF7643),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  Expanded(
-                                    child: Text(
-                                      item.product.title,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    "Rp${(item.product.price * item.quantity).toStringAsFixed(0)}",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
+                      ...cart.items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 15),
+                          child: Row(
+                            children: [
+                              Text(
+                                "${item.quantity}x ${item.product.title}",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
-                      const Divider(height: 30, color: Color(0xFFF0F0F0)),
+                              const Spacer(),
+                              Text(
+                                "Rp${(item.product.price * item.quantity).toStringAsFixed(0)}",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const Divider(height: 30),
                       _summaryRow(
-                        "Subtotal Produk",
+                        "Subtotal",
                         "Rp${cart.subTotal.toStringAsFixed(0)}",
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       _summaryRow(
                         "Ongkos Kirim",
                         "Rp${shippingCost.toStringAsFixed(0)}",
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                        child: Divider(color: Color(0xFFF0F0F0)),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            "Total Tagihan",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                          Text(
-                            "Rp${grandTotal.toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 18,
-                              color: Color(0xFFFF7643),
-                            ),
-                          ),
-                        ],
+                      const Divider(height: 30),
+                      _summaryRow(
+                        "Total Tagihan",
+                        "Rp${grandTotal.toStringAsFixed(0)}",
                       ),
                     ],
                   ),
@@ -306,7 +286,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                 const SizedBox(height: 25),
 
-                // 3. PAYMENT METHOD CARD
+                // ✅ UPDATED PAYMENT SECTION
                 _sectionTitle("Metode Pembayaran"),
                 Container(
                   decoration: _cardDecoration(),
@@ -318,7 +298,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         Icons.payments_outlined,
                         "COD",
                       ),
-                      // Divider line between options if added later
+                      const Divider(
+                        height: 1,
+                        indent: 20,
+                        endIndent: 20,
+                      ), // Divider Line
+                      _paymentOption(
+                        "QRIS / Transfer Manual",
+                        "Scan QR dan upload bukti",
+                        Icons.qr_code_scanner,
+                        "QRIS",
+                      ),
                     ],
                   ),
                 ),
@@ -334,7 +324,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black.withOpacity(0.05),
                 blurRadius: 20,
                 offset: const Offset(0, -5),
               ),
@@ -345,15 +335,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               onPressed: orderProv.isLoading ? null : _processCheckout,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7643),
-                disabledBackgroundColor: const Color(
-                  0xFFFF7643,
-                ).withValues(alpha: 0.6),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 elevation: 5,
-                shadowColor: const Color(0xFFFF7643).withValues(alpha: 0.3),
               ),
               child: orderProv.isLoading
                   ? const SizedBox(
@@ -364,9 +350,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         strokeWidth: 2.5,
                       ),
                     )
-                  : const Text(
-                      "KONFIRMASI PESANAN",
-                      style: TextStyle(
+                  : Text(
+                      selectedPayment == 'QRIS'
+                          ? "LANJUT PEMBAYARAN"
+                          : "KONFIRMASI PESANAN",
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -380,8 +368,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // --- UI HELPERS ---
-
+  // ... (Keep your helpers: _sectionTitle, _cardDecoration, _summaryRow, _paymentOption) ...
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),
@@ -402,7 +389,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       borderRadius: BorderRadius.circular(16),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
+          color: Colors.black.withOpacity(0.04),
           blurRadius: 15,
           offset: const Offset(0, 4),
         ),
@@ -432,7 +419,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final isSelected = selectedPayment == value;
     return InkWell(
       onTap: () => setState(() => selectedPayment = value),
-      borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -440,9 +426,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isSelected
+                    ? const Color(0xFFFF7643).withOpacity(0.1)
+                    : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
               ),
               child: Icon(
                 icon,
@@ -474,7 +461,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             Icon(
               isSelected ? Icons.check_circle : Icons.circle_outlined,
               color: isSelected ? const Color(0xFFFF7643) : Colors.grey[300],
-              size: 24,
             ),
           ],
         ),

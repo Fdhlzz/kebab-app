@@ -6,7 +6,7 @@ import '../utils/constants.dart';
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: AppConstants.apiUrl, // ✅ Uses your constant
+      baseUrl: AppConstants.apiUrl,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -18,7 +18,7 @@ class ApiService {
   );
 
   ApiService() {
-    // 1. ADD LOGGER: See Request/Response in Console (Crucial for debugging)
+    // 1. LOGGER
     _dio.interceptors.add(
       LogInterceptor(
         request: true,
@@ -33,8 +33,6 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final prefs = await SharedPreferences.getInstance();
-
-          // ✅ Uses your constant key
           final token = prefs.getString(AppConstants.storageTokenKey);
 
           if (token != null && token.isNotEmpty) {
@@ -42,7 +40,6 @@ class ApiService {
           } else {
             debugPrint("⚠️ API Request sent without Token");
           }
-
           return handler.next(options);
         },
         onError: (DioException e, handler) {
@@ -56,4 +53,43 @@ class ApiService {
   }
 
   Dio get client => _dio;
+
+  // ✅ ADD THIS NEW METHOD HERE
+  Future<String?> getQrisUrl() async {
+    try {
+      // Calls: GET /api/settings/qris
+      final response = await _dio.get('/settings/qris');
+
+      if (response.statusCode == 200 && response.data['url'] != null) {
+        return response.data['url'].toString();
+      }
+      return null;
+    } catch (e) {
+      debugPrint("❌ Error fetching QRIS: $e");
+      return null;
+    }
+  }
+
+  Future<bool> uploadPaymentProof(int orderId, String filePath) async {
+    try {
+      String fileName = filePath.split('/').last;
+
+      FormData formData = FormData.fromMap({
+        "payment_proof": await MultipartFile.fromFile(
+          filePath,
+          filename: fileName,
+        ),
+      });
+
+      final response = await _dio.post(
+        '/orders/$orderId/payment-proof', // Matches Laravel Route
+        data: formData,
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint("❌ Upload Error: $e");
+      return false;
+    }
+  }
 }
