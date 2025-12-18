@@ -2,20 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-// Providers
 import '../providers/cart_provider.dart';
 import '../providers/address_provider.dart';
-import '../providers/auth_provider.dart'; // ✅ Import AuthProvider
+import '../providers/auth_provider.dart';
 
-// Models
 import '../models/address_model.dart';
 
-// Screens
 import 'address/address_list_screen.dart';
 import 'checkout_screen.dart';
-import 'sign_in_screen.dart'; // ✅ Import SignInScreen
+import 'sign_in_screen.dart';
 
-// Local Helper Function
 String formatRupiah(double price) {
   return NumberFormat.currency(
     locale: 'id_ID',
@@ -38,8 +34,6 @@ class _CartScreenState extends State<CartScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Only fetch addresses if we are actually logged in,
-        // otherwise this might throw a 401 error silently.
         final auth = Provider.of<AuthProvider>(context, listen: false);
         if (auth.isAuthenticated) {
           Provider.of<AddressProvider>(context, listen: false).fetchAddresses();
@@ -50,6 +44,8 @@ class _CartScreenState extends State<CartScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
+
     return Consumer2<CartProvider, AddressProvider>(
       builder: (context, cart, addressProv, _) {
         final primaryAddress = addressProv.primaryAddress;
@@ -91,10 +87,8 @@ class _CartScreenState extends State<CartScreen> {
           ),
           body: Column(
             children: [
-              // 1. Address Header Section
-              _buildAddressHeader(context, primaryAddress),
-
-              // 2. Cart Items List
+              if (auth.isAuthenticated)
+                _buildAddressHeader(context, primaryAddress),
               Expanded(
                 child: cart.items.isEmpty
                     ? const _EmptyCartState()
@@ -112,7 +106,6 @@ class _CartScreenState extends State<CartScreen> {
               ),
             ],
           ),
-          // 3. Bottom Payment Summary
           bottomNavigationBar: cart.items.isEmpty
               ? null
               : _buildBottomSummary(
@@ -144,26 +137,9 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
       child: InkWell(
-        // ✅ UPDATED ONTAP LOGIC
         onTap: () async {
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-
-          // 1. Check Auth
-          if (!auth.isAuthenticated) {
-            Navigator.pushNamed(context, SignInScreen.routeName);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Silakan login untuk mengatur alamat"),
-                duration: Duration(seconds: 2),
-              ),
-            );
-            return;
-          }
-
-          // 2. Navigate if Auth
           await Navigator.pushNamed(context, AddressListScreen.routeName);
 
-          // 3. Refresh on return
           if (context.mounted) {
             Provider.of<AddressProvider>(
               context,
@@ -317,7 +293,6 @@ class _CartScreenState extends State<CartScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Checkout Button
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -325,7 +300,6 @@ class _CartScreenState extends State<CartScreen> {
                 onPressed: cart.items.isEmpty
                     ? null
                     : () {
-                        // ✅ CHECK AUTH
                         final auth = Provider.of<AuthProvider>(
                           context,
                           listen: false,
@@ -341,7 +315,6 @@ class _CartScreenState extends State<CartScreen> {
                           return;
                         }
 
-                        // ✅ CHECK ADDRESS (Only if Logged In)
                         if (address == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -457,7 +430,6 @@ class CartItemCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Image
             Container(
               width: 80,
               height: 80,
@@ -481,8 +453,6 @@ class CartItemCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-
-            // Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -510,8 +480,6 @@ class CartItemCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Horizontal Quantity Control
             Container(
               height: 36,
               decoration: BoxDecoration(

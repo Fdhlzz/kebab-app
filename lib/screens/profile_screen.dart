@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/cart_provider.dart'; // Import for clearing cart
+import '../providers/cart_provider.dart';
 import 'sign_in_screen.dart';
 import 'address/address_list_screen.dart';
 import 'notification_screen.dart';
@@ -13,7 +13,7 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA), // Clean off-white
+      backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
         title: const Text(
           "Profil Saya",
@@ -22,11 +22,10 @@ class ProfileScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: const Color(0xFFFAFAFA),
         elevation: 0,
-        automaticallyImplyLeading: false, // Hide back button on main tab
+        automaticallyImplyLeading: false,
       ),
       body: Consumer<AuthProvider>(
         builder: (context, auth, child) {
-          // --- GUEST STATE ---
           if (!auth.isAuthenticated) {
             return Center(
               child: Column(
@@ -88,7 +87,6 @@ class ProfileScreen extends StatelessWidget {
             );
           }
 
-          // --- LOGGED IN STATE ---
           final user = auth.user;
           return SingleChildScrollView(
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -109,13 +107,11 @@ class ProfileScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                 ),
                 const SizedBox(height: 30),
-
-                // Section 1: Account
                 _buildSectionHeader("AKUN SAYA"),
                 ProfileMenu(
                   text: "Edit Profil",
                   icon: Icons.person_outline_rounded,
-                  press: () {}, // TODO: Edit Profile Screen
+                  press: () {},
                 ),
                 ProfileMenu(
                   text: "Daftar Alamat",
@@ -123,10 +119,7 @@ class ProfileScreen extends StatelessWidget {
                   press: () =>
                       Navigator.pushNamed(context, AddressListScreen.routeName),
                 ),
-
                 const SizedBox(height: 10),
-
-                // Section 2: General
                 _buildSectionHeader("UMUM"),
                 ProfileMenu(
                   text: "Notifikasi",
@@ -152,10 +145,7 @@ class ProfileScreen extends StatelessWidget {
                     );
                   },
                 ),
-
                 const SizedBox(height: 30),
-
-                // Logout Button
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: SizedBox(
@@ -166,17 +156,54 @@ class ProfileScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        backgroundColor: const Color(0xFFFFE6E6), // Light Red
+                        backgroundColor: const Color(0xFFFFE6E6),
                       ),
-                      onPressed: () async {
-                        // 1. Clear Cart
-                        Provider.of<CartProvider>(
-                          context,
-                          listen: false,
-                        ).clearCart();
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              title: const Text(
+                                "Konfirmasi Logout",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              content: const Text(
+                                "Apakah Anda yakin ingin keluar dari akun ini?",
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text(
+                                    "Batal",
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () async {
+                                    Navigator.pop(context); // Close Dialog
 
-                        // 2. Logout Auth
-                        await auth.logout();
+                                    Provider.of<CartProvider>(
+                                      context,
+                                      listen: false,
+                                    ).clearCart();
+
+                                    await auth.logout();
+                                  },
+                                  child: const Text(
+                                    "Ya, Keluar",
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        );
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -201,7 +228,7 @@ class ProfileScreen extends StatelessWidget {
                   "Versi Aplikasi 1.0.0",
                   style: TextStyle(color: Colors.grey[400], fontSize: 12),
                 ),
-                const SizedBox(height: 20), // Bottom padding
+                const SizedBox(height: 20),
               ],
             ),
           );
@@ -303,7 +330,7 @@ class ProfileMenu extends StatelessWidget {
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        elevation: 0, // Flat style for cleaner look, use shadow if preferred
+        elevation: 0,
         child: InkWell(
           onTap: press,
           borderRadius: BorderRadius.circular(16),
@@ -311,7 +338,7 @@ class ProfileMenu extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade100), // Subtle border
+              border: Border.all(color: Colors.grey.shade100),
             ),
             child: Row(
               children: [
