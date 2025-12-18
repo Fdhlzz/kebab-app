@@ -1,23 +1,18 @@
 class AppConstants {
   // ---------------------------------------------------------------------------
-  // 🔴 IMPORTANT: If you restart Ngrok, this URL will change!
-  // Update it here every time you run 'ngrok http 8000'.
+  // 1. Remove 'const'. Change to 'static String'.
+  // This allows us to overwrite it at runtime!
   // ---------------------------------------------------------------------------
-
-  // ✅ Ngrok URL (HTTPS is required for Midtrans/Production simulation)
-  static const String baseUrl = 'http://172.16.121.93:8000';
+  static String baseUrl = 'http://172.16.121.93:8000'; // Default fallback
 
   // ---------------------------------------------------------------------------
-  // ❌ OLD LOCALHOST CONFIGS (Keep for reference)
-  // static const String baseUrl = 'http://10.0.2.2:8000'; // Android Emulator
-  // static const String baseUrl = 'http://192.168.1.X:8000'; // Physical Device LAN
+  // 2. Use 'get' (Getters).
+  // This ensures that if baseUrl changes, these update automatically.
   // ---------------------------------------------------------------------------
+  static String get apiUrl => '$baseUrl/api';
+  static String get storageUrl => '$baseUrl/storage';
 
-  // API Endpoints
-  static const String apiUrl = '$baseUrl/api';
-
-  // Storage for Images (Product/Avatar)
-  static const String storageUrl = '$baseUrl/storage';
+  // Constants that never change can stay 'const'
   static const String storageTokenKey = 'token';
   static const String storageUserKey = 'user_data';
 }

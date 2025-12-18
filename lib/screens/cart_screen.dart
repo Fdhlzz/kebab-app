@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart'; // ✅ Required for currency formatting
+import 'package:intl/intl.dart';
 
 // Providers
 import '../providers/cart_provider.dart';
 import '../providers/address_provider.dart';
+import '../providers/auth_provider.dart'; // ✅ Import AuthProvider
 
 // Models
 import '../models/address_model.dart';
@@ -12,8 +13,9 @@ import '../models/address_model.dart';
 // Screens
 import 'address/address_list_screen.dart';
 import 'checkout_screen.dart';
+import 'sign_in_screen.dart'; // ✅ Import SignInScreen
 
-// ✅ Local Helper Function (Fixes the "double has no instance method" error)
+// Local Helper Function
 String formatRupiah(double price) {
   return NumberFormat.currency(
     locale: 'id_ID',
@@ -34,10 +36,14 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch addresses fresh when entering cart to ensure shipping logic is correct
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Provider.of<AddressProvider>(context, listen: false).fetchAddresses();
+        // Only fetch addresses if we are actually logged in,
+        // otherwise this might throw a 401 error silently.
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        if (auth.isAuthenticated) {
+          Provider.of<AddressProvider>(context, listen: false).fetchAddresses();
+        }
       }
     });
   }
@@ -48,14 +54,11 @@ class _CartScreenState extends State<CartScreen> {
       builder: (context, cart, addressProv, _) {
         final primaryAddress = addressProv.primaryAddress;
 
-        // Calculate costs dynamically based on the currently selected address
         final shippingCost = primaryAddress?.shippingCost ?? 0.0;
         final grandTotal = cart.subTotal + shippingCost;
 
         return Scaffold(
-          backgroundColor: const Color(
-            0xFFFAFAFA,
-          ), // Clean off-white background
+          backgroundColor: const Color(0xFFFAFAFA),
           appBar: AppBar(
             title: Column(
               children: [
@@ -109,7 +112,7 @@ class _CartScreenState extends State<CartScreen> {
               ),
             ],
           ),
-          // 3. Bottom Payment Summary (Hidden if empty)
+          // 3. Bottom Payment Summary
           bottomNavigationBar: cart.items.isEmpty
               ? null
               : _buildBottomSummary(
@@ -141,10 +144,26 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
       child: InkWell(
+        // ✅ UPDATED ONTAP LOGIC
         onTap: () async {
-          // Go to Address List to select/add address
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+
+          // 1. Check Auth
+          if (!auth.isAuthenticated) {
+            Navigator.pushNamed(context, SignInScreen.routeName);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Silakan login untuk mengatur alamat"),
+                duration: Duration(seconds: 2),
+              ),
+            );
+            return;
+          }
+
+          // 2. Navigate if Auth
           await Navigator.pushNamed(context, AddressListScreen.routeName);
-          // Refresh data when returning
+
+          // 3. Refresh on return
           if (context.mounted) {
             Provider.of<AddressProvider>(
               context,
@@ -264,7 +283,6 @@ class _CartScreenState extends State<CartScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Tertiary Info (Subtotal & Shipping)
             _summaryRow("Subtotal", cart.subTotal),
             const SizedBox(height: 10),
             _summaryRow("Ongkos Kirim", shippingCost, isShipping: true),
@@ -274,7 +292,6 @@ class _CartScreenState extends State<CartScreen> {
               child: Divider(height: 1, color: Color(0xFFEEEEEE)),
             ),
 
-            // Primary Info (Grand Total)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -287,7 +304,6 @@ class _CartScreenState extends State<CartScreen> {
                     color: Colors.black87,
                   ),
                 ),
-                // ✅ Fixed: Using formatRupiah helper
                 Text(
                   formatRupiah(grandTotal),
                   style: const TextStyle(
@@ -309,6 +325,23 @@ class _CartScreenState extends State<CartScreen> {
                 onPressed: cart.items.isEmpty
                     ? null
                     : () {
+                        // ✅ CHECK AUTH
+                        final auth = Provider.of<AuthProvider>(
+                          context,
+                          listen: false,
+                        );
+
+                        if (!auth.isAuthenticated) {
+                          Navigator.pushNamed(context, SignInScreen.routeName);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Silakan login untuk memesan"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // ✅ CHECK ADDRESS (Only if Logged In)
                         if (address == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -333,7 +366,6 @@ class _CartScreenState extends State<CartScreen> {
                           return;
                         }
 
-                        // Navigate to Checkout Page
                         Navigator.pushNamed(context, CheckoutScreen.routeName);
                       },
                 style: ElevatedButton.styleFrom(
@@ -366,7 +398,6 @@ class _CartScreenState extends State<CartScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-        // ✅ Fixed: Using formatRupiah helper
         Text(
           value == 0 && isShipping ? "Gratis" : formatRupiah(value),
           style: TextStyle(
@@ -468,7 +499,6 @@ class CartItemCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // ✅ Fixed: Using formatRupiah helper
                   Text(
                     formatRupiah(product.price),
                     style: const TextStyle(
