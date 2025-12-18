@@ -2,24 +2,24 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
+import '../utils/globals.dart';
+import '../screens/connection_screen.dart';
 
 class ApiService {
   final Dio _dio = Dio(
     BaseOptions(
-      // Default fallback. This will be overwritten by the interceptor below.
       baseUrl: AppConstants.apiUrl,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'ngrok-skip-browser-warning': 'true',
       },
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
     ),
   );
 
   ApiService() {
-    // 1. LOGGER (Helps debug API calls in terminal)
     _dio.interceptors.add(
       LogInterceptor(
         request: true,
@@ -29,56 +29,72 @@ class ApiService {
       ),
     );
 
-    // 2. DYNAMIC URL & AUTH INTERCEPTOR
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final prefs = await SharedPreferences.getInstance();
 
-          // --- [START] DYNAMIC URL LOGIC ---
-          // Read the saved API URL from storage (e.g., http://192.168.1.10:8000/api)
           final savedApiUrl = prefs.getString('api_base_url');
-
           if (savedApiUrl != null && savedApiUrl.isNotEmpty) {
-            // Overwrite the Dio baseUrl for this specific request
             options.baseUrl = savedApiUrl;
           }
-          // --- [END] DYNAMIC URL LOGIC ---
 
-          // --- [START] AUTH TOKEN LOGIC ---
           final token = prefs.getString(AppConstants.storageTokenKey);
-
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           } else {
             debugPrint("⚠️ API Request sent without Token");
           }
-          // --- [END] AUTH TOKEN LOGIC ---
 
           return handler.next(options);
         },
+
         onError: (DioException e, handler) {
-          // Handle 401 Unauthorized globally
-          if (e.response?.statusCode == 401) {
-            debugPrint("❌ UNAUTHORIZED: Token might be invalid or expired");
+          bool isConnectionError =
+              e.type == DioExceptionType.connectionTimeout ||
+              e.type == DioExceptionType.connectionError ||
+              e.type == DioExceptionType.receiveTimeout ||
+              (e.type == DioExceptionType.unknown &&
+                  e.message != null &&
+                  e.message!.contains('SocketException'));
+
+          if (isConnectionError) {
+            debugPrint(
+              "🚨 CONNECTION LOST: Redirecting to Connection Screen...",
+            );
+
+            navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              ConnectionScreen.routeName,
+              (route) => false,
+            );
+            final context = navigatorKey.currentContext;
+            if (context != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    "Koneksi terputus. Silakan konfigurasi ulang IP Server.",
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 5),
+                ),
+              );
+            }
           }
+
+          if (e.response?.statusCode == 401) {
+            debugPrint("❌ UNAUTHORIZED: Token might be invalid");
+          }
+
           return handler.next(e);
         },
       ),
     );
   }
 
-  // Expose the client if needed elsewhere
   Dio get client => _dio;
 
-  // ---------------------------------------------------------------------------
-  // ✅ CONNECTION TESTER
-  // Used by ConnectionScreen to verify IP before saving
-  // ---------------------------------------------------------------------------
   Future<bool> checkConnection(String ip) async {
     try {
-      // Create a temporary Dio instance just for this test.
-      // We use a short timeout so the user doesn't wait long.
       final tempDio = Dio(
         BaseOptions(
           connectTimeout: const Duration(seconds: 5),
@@ -86,10 +102,7 @@ class ApiService {
         ),
       );
 
-      // We try to hit the public 'menu' endpoint.
-      // If the server is running, this should return 200 OK.
       final testUrl = 'http://$ip:8000/api/menu';
-
       final response = await tempDio.get(testUrl);
       return response.statusCode == 200;
     } catch (e) {
@@ -97,10 +110,6 @@ class ApiService {
       return false;
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // EXISTING METHODS
-  // ---------------------------------------------------------------------------
 
   Future<String?> getQrisUrl() async {
     try {
